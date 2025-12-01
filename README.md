@@ -44,11 +44,15 @@ python create_plots.py results/scored_completions.csv figures/
 - **Perplexity**: Lower = more typical of real 1990-2019 commentary
 - **Atypicality**: Higher = more unusual words (IDF-based)
 
+
 ### Interpretation
 
 White players received slightly lower perplexity scores, suggesting LLM commentary for white players is marginally more "typical" of real human commentary patterns.
 
-**⚠️ Not statistically significant** — only 20 players (40 completions). Full experiment requires 600 players for meaningful results.
+
+
+**⚠️ Not statistically significant** — only 20 players (5 QB, 5 RB, 5 WR, 5 DEF) (40 completions). Full experiment requires 600 players for meaningful results.
+
 
 ---
 
