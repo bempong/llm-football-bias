@@ -1,0 +1,19 @@
+# Environment variables (API keys)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Large model files (regenerate with bias_scoring.py)
+bias_scoring/models/
+
+# OS files
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+tagged_transcripts.json
