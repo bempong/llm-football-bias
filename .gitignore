@@ -9,6 +9,9 @@ __pycache__/
 # Large model files (regenerate with bias_scoring.py)
 bias_scoring/models/
 
+# Log-odds scoring outputs (exclude analysis results)
+log_odds_scoring/output/
+
 # OS files
 .DS_Store
 
