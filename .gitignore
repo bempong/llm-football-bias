@@ -17,3 +17,4 @@ bias_scoring/models/
 .idea/
 
 tagged_transcripts.json
+retrieve_player_dataset.py
