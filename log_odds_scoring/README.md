@@ -95,14 +95,15 @@ cognitive                4.8%    0.0%  0.00
 - White players get 3.5x more "discipline/technical" adjectives  
 - Nonwhite players get more "athleticism" adjectives (but only 0.77x, not dramatic)
 
-## Improved Prompts for Future Experiments
+## Prompt Templates
 
-See `new_prompts.py` for an evaluative commentary prompt designed to elicit more bias-revealing language:
+See `new_prompts.py` for standard commentary prompts:
 
 ```python
-from log_odds_scoring.new_prompts import build_evaluative_commentary_prompt
+from log_odds_scoring.new_prompts import build_commentary_prompt
 
-prompt = build_evaluative_commentary_prompt(
+# From scratch: LLM invents a play
+prompt = build_commentary_prompt(
     player_name="Player Name",
     race_descriptor="white",  # or "nonwhite" or "" for ablated
     position_full="quarterback",
@@ -110,9 +111,20 @@ prompt = build_evaluative_commentary_prompt(
     league="NFL",
     year=2010
 )
+
+# Completion: LLM continues real commentary
+prompt = build_commentary_prompt(
+    player_name="Player Name",
+    race_descriptor="white",
+    position_full="quarterback",
+    team="Team Name",
+    league="NFL",
+    year=2010,
+    commentary_start="Brady drops back, surveys the field..."
+)
 ```
 
-This prompt explicitly asks for evaluation across cognitive, physical, leadership, and character dimensions.
+These prompts generate 2 sentences of play-by-play and 1-2 sentences of analysis.
 
 ## Installation
 
