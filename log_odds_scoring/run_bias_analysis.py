@@ -184,3 +184,7 @@ def main():
 if __name__ == "__main__":
     main()
 
+
+# python -m log_odds_scoring.run_bias_analysis \
+#     --completions-path "mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_output/llm_generations.csv"
+#     --output-dir output_results/bias_analysis_v2 \
