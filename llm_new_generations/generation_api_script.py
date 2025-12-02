@@ -126,7 +126,7 @@ def make_player_profile(row: pd.Series, include_race: bool) -> str:
     """
     race_text = ""
     if include_race:
-        race_label = "white" if row['race'] == 'white' else "Black"
+        race_label = "white" if row['race'] == 'white' else "nonwhite"
         race_text = f"{race_label} "
     
     # Build profile
