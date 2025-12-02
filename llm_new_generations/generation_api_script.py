@@ -396,10 +396,10 @@ def main():
 
     ###########################################################################
     # For testing, use a smaller subset (commennt out for full run)
-    mini_players_df = players_df.head(SMALL_SIZE)
-    print("\nSampled players:")
+    # mini_players_df = players_df.head(SMALL_SIZE)
+    # print("\nSampled players:")
 
-    players_df = mini_players_df
+    # players_df = mini_players_df
     # End testing subset
     ############################################################################
 
