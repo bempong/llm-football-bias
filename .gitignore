@@ -1,16 +1,10 @@
-# Environment variables (API keys)
+# Environment variables (API keys - NEVER commit!)
 .env
 
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Large model files (regenerate with bias_scoring.py)
-bias_scoring/models/
-
-# Log-odds scoring outputs (exclude analysis results)
-log_odds_scoring/output/
 
 # OS files
 .DS_Store
@@ -19,5 +13,8 @@ log_odds_scoring/output/
 .vscode/
 .idea/
 
+# Large data files (not tracked in git)
 tagged_transcripts.json
-retrieve_player_dataset.py
+raw_transcripts.json
+
+

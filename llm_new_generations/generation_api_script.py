@@ -62,7 +62,7 @@ np.random.seed(42)
 SMALL_SIZE = 10  # For testing
 
 DEFAULT_CONFIG = {
-    'output_path': 'output/llm_completions.csv',
+    'output_path': 'output/llm_generations.csv',
     'model_name': 'gpt-4o-mini',  # Default to OpenAI GPT-4o-mini
     'samples_per_condition': 1,  # How many completions per (player, condition)
     'max_new_tokens': 150,
@@ -390,7 +390,7 @@ def main():
     print(f"  Model: {args.model_name}")
     print(f"  Samples per condition: {args.samples_per_condition}")
     
-    csv_path = "/player_output/sampled_players.csv"
+    csv_path = "/players/sampled_players.csv"
     players_df = pd.read_csv(os.getcwd() + csv_path)
     print(f"\nLoaded {len(players_df)} sampled players from {csv_path}")
 
@@ -441,4 +441,4 @@ if __name__ == "__main__":
 
 # ============================================================================
 
-# python llm_new_generations/generation_api_script.py --model-name gpt-4o-mini --output-path llm_output/llm_generations.csv
+# python llm_new_generations/generation_api_script.py --model-name gpt-4o-mini --output-path llm_new_generations/output/llm_generations.csv
