@@ -16,5 +16,5 @@ __pycache__/
 # Large data files (not tracked in git)
 tagged_transcripts.json
 raw_transcripts.json
-
-
+retrieve_player_dataset.py
+commands.txt
