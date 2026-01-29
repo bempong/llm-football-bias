@@ -1,12 +1,11 @@
 """
-Configuration for Bias Analysis V2
+Configuration for Log-Odds Bias Analysis
 """
 
 from pathlib import Path
 
 # Directory structure
 BASE_DIR = Path(__file__).parent
-LEXICONS_DIR = BASE_DIR / "lexicons"
 OUTPUT_DIR = BASE_DIR / "output"
 
 # Race group labels (must match the CSV column values)
@@ -32,8 +31,4 @@ STOPWORDS = {
     # Football-specific stopwords that don't carry bias signal
     'player', 'game', 'play', 'yard', 'yards', 'ball', 'field', 'team', 'down'
 }
-
-# Adjective category minimum frequency (for building lexicon from corpus)
-ADJECTIVE_MIN_FREQ = 3  # Word must appear at least this many times to be considered
-ADJECTIVE_MIN_DISTINCTIVENESS = 1.5  # Ratio threshold for considering a word distinctive
 

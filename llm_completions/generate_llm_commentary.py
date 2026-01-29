@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 """
-LLM Commentary Generation for Racial Bias Experiment
+LLM Commentary Completion with race-explicit and race-ablated conditions.
 
-This script generates synthetic football commentary using LLaMA 3.1 70B
-for real players from the 1990-2019 dataset, with race-explicit and 
-race-ablated conditions.
-
-Output: CSV file ready for bias_scoring engine (perplexity/atypicality scoring).
+Output: CSV file ready for scoring.
 """
 
 import json
@@ -431,123 +427,119 @@ Stay focused on the play and this player. Do not include instructional wording i
     return prompt
 
 
-# ============================================================================
-# LLAMA 3.1 70B LOADING
-# ============================================================================
-
-def load_llama_model(model_name: str, device: str = "auto"):
-    """
-    Load LLaMA 3.1 70B Instruct from Hugging Face.
+# def load_llama_model(model_name: str, device: str = "auto"):
+#     """
+#     Load LLaMA 3.1 70B Instruct from Hugging Face.
     
-    Args:
-        model_name: HuggingFace model repo (e.g., "meta-llama/Llama-3.1-70B-Instruct")
-        device: Device placement ("auto" for automatic)
+#     Args:
+#         model_name: HuggingFace model repo (e.g., "meta-llama/Llama-3.1-70B-Instruct")
+#         device: Device placement ("auto" for automatic)
     
-    Returns:
-        TextGenerationPipeline object
-    """
-    print(f"\nLoading LLaMA model: {model_name}")
-    print("This may take several minutes (model is ~140GB)...")
+#     Returns:
+#         TextGenerationPipeline object
+#     """
+#     print(f"\nLoading LLaMA model: {model_name}")
+#     print("This may take several minutes (model is ~140GB)...")
     
-    try:
-        from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-        import torch
+#     try:
+#         from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+#         import torch
         
-        # Load with authentication
-        hf_token = os.getenv('HF_TOKEN')
-        if not hf_token:
-            raise ValueError("HF_TOKEN environment variable not set. Get token from https://huggingface.co/settings/tokens")
+#         # Load with authentication
+#         hf_token = os.getenv('HF_TOKEN')
+#         if not hf_token:
+#             raise ValueError("HF_TOKEN environment variable not set. Get token from https://huggingface.co/settings/tokens")
         
-        print("  Loading tokenizer...")
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_name,
-            token=hf_token
-        )
+#         print("  Loading tokenizer...")
+#         tokenizer = AutoTokenizer.from_pretrained(
+#             model_name,
+#             token=hf_token
+#         )
         
-        print("  Loading model (this will take a while)...")
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            token=hf_token,
-            device_map=device,
-            torch_dtype=torch.bfloat16,
-            low_cpu_mem_usage=True
-        )
+#         print("  Loading model (this will take a while)...")
+#         model = AutoModelForCausalLM.from_pretrained(
+#             model_name,
+#             token=hf_token,
+#             device_map=device,
+#             torch_dtype=torch.bfloat16,
+#             low_cpu_mem_usage=True
+#         )
         
-        print("  Creating pipeline...")
-        pipe = pipeline(
-            "text-generation",
-            model=model,
-            tokenizer=tokenizer,
-            device_map=device
-        )
+#         print("  Creating pipeline...")
+#         pipe = pipeline(
+#             "text-generation",
+#             model=model,
+#             tokenizer=tokenizer,
+#             device_map=device
+#         )
         
-        print("Model loaded successfully!")
-        return pipe
+#         print("Model loaded successfully!")
+#         return pipe
         
-    except ImportError as e:
-        print(f"Error: transformers or torch not installed")
-        print("Install with: pip install transformers torch accelerate")
-        raise
-    except Exception as e:
-        print(f"Error loading model: {e}")
-        raise
+#     except ImportError as e:
+#         print(f"Error: transformers or torch not installed")
+#         print("Install with: pip install transformers torch accelerate")
+#         raise
+#     except Exception as e:
+#         print(f"Error loading model: {e}")
+#         raise
 
 
-# ============================================================================
-# TOGETHER AI API (Recommended - hosts Llama 3.1 70B)
-# ============================================================================
+# # ============================================================================
+# # TOGETHER AI API (Recommended - hosts Llama 3.1 70B)
+# # ============================================================================
 
-def load_llama_api(model_name: str):
-    """
-    Use Together AI API for Llama 3.1 70B inference.
+# # def load_llama_api(model_name: str):
+# #     """
+# #     Use Together AI API for Llama 3.1 70B inference.
     
-    Args:
-        model_name: Together AI model name (e.g., "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo")
+# #     Args:
+# #         model_name: Together AI model name (e.g., "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo")
     
-    Returns:
-        Simple callable that takes prompt and returns completion
-    """
-    # Map HuggingFace names to Together AI names
-    together_model_map = {
-        'meta-llama/Meta-Llama-3.1-70B-Instruct': 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
-        'meta-llama/Llama-3.1-70B-Instruct': 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
-    }
-    together_model = together_model_map.get(model_name, model_name)
+# #     Returns:
+# #         Simple callable that takes prompt and returns completion
+# #     """
+# #     # Map HuggingFace names to Together AI names
+# #     together_model_map = {
+# #         'meta-llama/Meta-Llama-3.1-70B-Instruct': 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
+# #         'meta-llama/Llama-3.1-70B-Instruct': 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
+# #     }
+# #     together_model = together_model_map.get(model_name, model_name)
     
-    print(f"\nUsing Together AI API for: {together_model}")
+# #     print(f"\nUsing Together AI API for: {together_model}")
     
-    try:
-        from together import Together
+# #     try:
+# #         from together import Together
         
-        api_key = os.getenv('TOGETHER_API_KEY')
-        if not api_key:
-            raise ValueError("TOGETHER_API_KEY environment variable not set. Get one at https://api.together.xyz/")
+# #         api_key = os.getenv('TOGETHER_API_KEY')
+# #         if not api_key:
+# #             raise ValueError("TOGETHER_API_KEY environment variable not set. Get one at https://api.together.xyz/")
         
-        client = Together(api_key=api_key)
+# #         client = Together(api_key=api_key)
         
-        def generate(prompt: str, max_new_tokens: int = 150, 
-                    temperature: float = 0.8, top_p: float = 0.9) -> str:
-            """Generate completion using Together AI API."""
-            try:
-                response = client.chat.completions.create(
-                    model=together_model,
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=max_new_tokens,
-                    temperature=temperature,
-                    top_p=top_p,
-                )
-                return response.choices[0].message.content
-            except Exception as e:
-                print(f"Error generating: {e}")
-                return f"[ERROR: {str(e)[:50]}]"
+# #         def generate(prompt: str, max_new_tokens: int = 150, 
+# #                     temperature: float = 0.8, top_p: float = 0.9) -> str:
+# #             """Generate completion using Together AI API."""
+# #             try:
+# #                 response = client.chat.completions.create(
+# #                     model=together_model,
+# #                     messages=[{"role": "user", "content": prompt}],
+# #                     max_tokens=max_new_tokens,
+# #                     temperature=temperature,
+# #                     top_p=top_p,
+# #                 )
+# #                 return response.choices[0].message.content
+# #             except Exception as e:
+# #                 print(f"Error generating: {e}")
+# #                 return f"[ERROR: {str(e)[:50]}]"
         
-        print("Together AI client ready!")
-        return generate
+# #         print("Together AI client ready!")
+# #         return generate
         
-    except ImportError:
-        print("Error: together not installed")
-        print("Install with: pip install together")
-        raise
+# #     except ImportError:
+# #         print("Error: together not installed")
+# #         print("Install with: pip install together")
+# #         raise
 
 
 # ============================================================================
@@ -757,9 +749,88 @@ def save_completions(df: pd.DataFrame, out_path: str) -> None:
     print(f"File size: {Path(out_path).stat().st_size / 1024 / 1024:.2f} MB")
 
 
-# ============================================================================
-# MAIN
-# ============================================================================
+
+def load_presampled_players_with_commentary(
+    players_csv_path: str,
+    transcripts_path: str,
+    year_start: int = 1990,
+    year_end: int = 2019
+) -> pd.DataFrame:
+    """
+    Load pre-sampled players from CSV and fetch their commentary contexts from transcripts.
+    
+    Args:
+        players_csv_path: Path to pre-sampled players CSV
+        transcripts_path: Path to tagged_transcripts.json
+        year_start: Start year
+        year_end: End year
+    
+    Returns:
+        DataFrame with player info and commentary contexts
+    """
+    print(f"\nLoading pre-sampled players from {players_csv_path}...")
+    players_df = pd.read_csv(players_csv_path)
+    print(f"  Loaded {len(players_df)} players")
+    print(f"  By position:\n{players_df['player_position'].value_counts()}")
+    print(f"  By race:\n{players_df['race'].value_counts()}")
+    
+    # Load transcripts to get commentary contexts
+    print(f"\nLoading transcripts from {transcripts_path} to get commentary contexts...")
+    
+    with open(transcripts_path, 'r') as f:
+        data = json.load(f)
+    
+    # Build a mapping of player_name -> best commentary context
+    player_commentaries = defaultdict(list)
+    
+    for game_file, game_data in data.items():
+        year = extract_year_from_filename(game_file)
+        
+        if not year or year < year_start or year > year_end:
+            continue
+        
+        transcript = game_data.get('transcript', '')
+        
+        parser = PlayerTagParser()
+        try:
+            parser.feed(transcript)
+        except:
+            continue
+        
+        for player in parser.players:
+            if not player['player']:
+                continue
+            
+            player_name = player['player'].lower().strip()
+            commentary = extract_commentary_context(transcript, player['player'])
+            
+            if commentary and len(commentary) > 50:
+                player_commentaries[player_name].append(commentary)
+    
+    # Match players and add commentary
+    def get_best_commentary(player_name):
+        name = player_name.lower().strip()
+        if name in player_commentaries and player_commentaries[name]:
+            # Return the longest commentary
+            return max(player_commentaries[name], key=len)
+        return ""
+    
+    players_df['example_commentary'] = players_df['player_name'].apply(get_best_commentary)
+    
+    # Report matching stats
+    has_commentary = (players_df['example_commentary'].str.len() > 50).sum()
+    print(f"  Matched {has_commentary}/{len(players_df)} players with commentary context")
+    
+    # Rename columns to match expected format
+    if 'player_position' in players_df.columns:
+        # Map position names
+        pos_map = {'QB': 'QB', 'RB': 'RB', 'WR': 'WR', 'DEF': 'DEF'}
+        players_df['player_position'] = players_df['player_position'].map(
+            lambda x: pos_map.get(x.upper(), x.upper()) if isinstance(x, str) else x
+        )
+    
+    return players_df
+
 
 def main():
     """Main generation script."""
@@ -768,6 +839,8 @@ def main():
     parser = argparse.ArgumentParser(description="Generate LLM commentary for racial bias experiment")
     parser.add_argument('--kaggle-path', type=str, default=DEFAULT_CONFIG['kaggle_path'],
                        help='Path to tagged_transcripts.json')
+    parser.add_argument('--players-csv', type=str, default=None,
+                       help='Path to pre-sampled players CSV (optional, skips sampling if provided)')
     parser.add_argument('--output-path', type=str, default=DEFAULT_CONFIG['output_path'],
                        help='Output CSV path')
     parser.add_argument('--model-name', type=str, default=DEFAULT_CONFIG['model_name'],
@@ -803,6 +876,7 @@ def main():
     print("=" * 80)
     print(f"\nConfiguration:")
     print(f"  Kaggle data: {args.kaggle_path}")
+    print(f"  Pre-sampled players: {args.players_csv}")
     print(f"  Output: {args.output_path}")
     print(f"  Model: {args.model_name}")
     print(f"  Use API: {args.use_api}")
@@ -811,21 +885,30 @@ def main():
     print(f"  Samples: QB={args.qb_n}, RB={args.rb_n}, WR={args.wr_n}, DEF={args.def_n}")
     print(f"  Samples per condition: {args.samples_per_condition}")
     
-    # Step 1: Load and filter Kaggle data
-    df_raw = load_kaggle_data(
-        args.kaggle_path,
-        year_start=DEFAULT_CONFIG['year_start'],
-        year_end=DEFAULT_CONFIG['year_end']
-    )
-    
-    # Step 2: Sample player/position combos
-    players_df = sample_player_position_combos(
-        df_raw,
-        qb_n=args.qb_n,
-        rb_n=args.rb_n,
-        wr_n=args.wr_n,
-        def_n=args.def_n
-    )
+    # Step 1 & 2: Load players (either from pre-sampled CSV or by sampling)
+    if args.players_csv:
+        # Use pre-sampled players
+        players_df = load_presampled_players_with_commentary(
+            args.players_csv,
+            args.kaggle_path,
+            year_start=DEFAULT_CONFIG['year_start'],
+            year_end=DEFAULT_CONFIG['year_end']
+        )
+    else:
+        # Load and sample from Kaggle data
+        df_raw = load_kaggle_data(
+            args.kaggle_path,
+            year_start=DEFAULT_CONFIG['year_start'],
+            year_end=DEFAULT_CONFIG['year_end']
+        )
+        
+        players_df = sample_player_position_combos(
+            df_raw,
+            qb_n=args.qb_n,
+            rb_n=args.rb_n,
+            wr_n=args.wr_n,
+            def_n=args.def_n
+        )
     
     # Step 3: Load model/API
     if args.use_api:

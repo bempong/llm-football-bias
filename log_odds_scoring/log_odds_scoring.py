@@ -4,11 +4,6 @@ Log-Odds Ratio Scoring with Informative Dirichlet Prior
 
 Implements the method from Monroe et al. (2009) for comparing word usage
 between two groups (white vs nonwhite players in our case).
-
-Reference:
-Monroe, B. L., Colaresi, M. P., & Quinn, K. M. (2008). Fightin' words: 
-Lexical feature selection and evaluation for identifying the content of 
-political conflict. Political Analysis, 16(4), 372-403.
 """
 
 import re
@@ -104,18 +99,18 @@ def compute_log_odds_with_prior(
     
     Args:
         word: The word
-        count_a: Count in group A
-        count_b: Count in group B
+        count_a: Count in group A (white)
+        count_b: Count in group B (nonwhite)
         total_a: Total tokens in group A
         total_b: Total tokens in group B
         count_background: Count in pooled background
         total_background: Total tokens in background
-        alpha_0: Prior strength parameter
+        alpha_0: Dirichlet prior strength parameter
     
     Returns:
         (delta, z_score, variance) where:
-        - delta: log-odds ratio (positive = more associated with group A)
-        - z_score: standardized score
+        - delta: log-odds ratio (positive = more associated with white players)
+        - z_score: standardized score (|z| > 1.96 = statistical significance)
         - variance: estimated variance of delta
     """
     # Compute informative prior weight for this word
