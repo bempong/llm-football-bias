@@ -10,25 +10,33 @@ Output: CSV file ready for bias_scoring engine (perplexity/atypicality scoring).
 USAGE EXAMPLES:
 
 1. Using OpenAI GPT-4o-mini (default):
-   python test_script.py --model-name gpt-4o-mini \
-       --kaggle-path /path/to/tagged_transcripts.json
+   python generation_api_script.py --model-name gpt-4o-mini \
+       --output-path llm_output/llm_generations.csv
 
-2. Using OpenAI GPT-4:
-   python test_script.py --model-name gpt-4 \
-       --kaggle-path /path/to/tagged_transcripts.json
+2. Using Anthropic Claude 3.5 Sonnet:
+   python generation_api_script.py --api-provider anthropic \
+       --model-name claude-3-5-sonnet-20241022 \
+       --output-path llm_output/llm_generations.csv
 
-3. Using Together AI (LLaMA):
-   python test_script.py --api-provider together \
+3. Using Anthropic Claude 3 Opus:
+   python generation_api_script.py --api-provider anthropic \
+       --model-name claude-3-opus-20240229 \
+       --output-path llm_output/llm_generations.csv
+
+4. Using Together AI (LLaMA):
+   python generation_api_script.py --api-provider together \
        --model-name meta-llama/Meta-Llama-3.1-70B-Instruct \
-       --kaggle-path /path/to/tagged_transcripts.json
+       --output-path llm_output/llm_generations.csv
 
 SETUP:
 1. Copy .env.example to .env
 2. Add your API key(s) to .env:
    - OPENAI_API_KEY for OpenAI models (get from https://platform.openai.com/api-keys)
+   - ANTHROPIC_API_KEY for Claude models (get from https://console.anthropic.com/)
    - TOGETHER_API_KEY for Together AI (get from https://api.together.xyz/)
 3. Install required package:
    - For OpenAI: pip install openai
+   - For Anthropic: pip install anthropic
    - For Together AI: pip install together
 """
 
@@ -221,6 +229,114 @@ def load_openai_api(model_name: str):
         print("Install with: pip install openai")
         raise
 
+
+# ============================================================================
+# ANTHROPIC API (Claude models)
+# ============================================================================
+
+def load_anthropic_api(model_name: str):
+    """
+    Use Anthropic API for Claude models.
+
+    Args:
+        model_name: Anthropic model name (e.g., "claude-3-5-sonnet-20241022", "claude-3-opus-20240229")
+
+    Returns:
+        Simple callable that takes prompt and returns completion
+    """
+    print(f"\nUsing Anthropic API for: {model_name}")
+
+    try:
+        from anthropic import Anthropic
+
+        api_key = os.getenv('ANTHROPIC_API_KEY')
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY environment variable not set. Get one at https://console.anthropic.com/")
+
+        client = Anthropic(api_key=api_key)
+
+        def generate(prompt: str, max_new_tokens: int = 150,
+                    temperature: float = 0.8, top_p: float = 0.9) -> str:
+            """Generate completion using Anthropic API."""
+            try:
+                response = client.messages.create(
+                    model=model_name,
+                    max_tokens=max_new_tokens,
+                    temperature=temperature,
+                    top_p=top_p,
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                return response.content[0].text
+            except Exception as e:
+                print(f"Error generating: {e}")
+                return f"[ERROR: {str(e)[:50]}]"
+
+        print("Anthropic client ready!")
+        return generate
+
+    except ImportError:
+        print("Error: anthropic not installed")
+        print("Install with: pip install anthropic")
+        raise
+
+
+# ============================================================================
+# TOGETHER AI API (for LLaMA and other models)
+# ============================================================================
+
+def load_together_api(model_name: str):
+    """
+    Use Together AI API for LLaMA and other models.
+
+    Args:
+        model_name: Together AI model name (e.g., "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo")
+
+    Returns:
+        Simple callable that takes prompt and returns completion
+    """
+    # Map common names to Together AI names
+    together_model_map = {
+        'meta-llama/Meta-Llama-3.1-70B-Instruct': 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
+        'meta-llama/Llama-3.1-70B-Instruct': 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
+    }
+    together_model = together_model_map.get(model_name, model_name)
+
+    print(f"\nUsing Together AI API for: {together_model}")
+
+    try:
+        from together import Together
+
+        api_key = os.getenv('TOGETHER_API_KEY')
+        if not api_key:
+            raise ValueError("TOGETHER_API_KEY environment variable not set. Get one at https://api.together.xyz/")
+
+        client = Together(api_key=api_key)
+
+        def generate(prompt: str, max_new_tokens: int = 150,
+                    temperature: float = 0.8, top_p: float = 0.9) -> str:
+            """Generate completion using Together AI API."""
+            try:
+                response = client.chat.completions.create(
+                    model=together_model,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=max_new_tokens,
+                    temperature=temperature,
+                    top_p=top_p,
+                )
+                return response.choices[0].message.content
+            except Exception as e:
+                print(f"Error generating: {e}")
+                return f"[ERROR: {str(e)[:50]}]"
+
+        print("Together AI client ready!")
+        return generate
+
+    except ImportError:
+        print("Error: together not installed")
+        print("Install with: pip install together")
+        raise
+
+
 # ============================================================================
 # GENERATION LOOP
 # ============================================================================
@@ -373,6 +489,9 @@ def main():
     parser.add_argument('--samples-per-condition', type=int,
                        default=DEFAULT_CONFIG['samples_per_condition'],
                        help='Number of completions per (player, condition)')
+    parser.add_argument('--api-provider', type=str, default='openai',
+                       choices=['openai', 'anthropic', 'together'],
+                       help='API provider to use: openai (default), anthropic, or together')
     parser.add_argument('--max-new-tokens', type=int, default=DEFAULT_CONFIG['max_new_tokens'],
                        help='Max tokens to generate')
     parser.add_argument('--temperature', type=float, default=DEFAULT_CONFIG['temperature'],
@@ -404,8 +523,17 @@ def main():
     ############################################################################
 
     # Step 3: Load API
-    generator = load_openai_api(args.model_name)
+    if args.api_provider == 'openai':
+        generator = load_openai_api(args.model_name)
+    elif args.api_provider == 'anthropic':
+        generator = load_anthropic_api(args.model_name)
+    elif args.api_provider == 'together':
+        generator = load_together_api(args.model_name)
+    else:
+        raise ValueError(f"Unknown API provider: {args.api_provider}")
+
     print("Model Name:", args.model_name)
+    print("API Provider:", args.api_provider)
 
     # Step 4: Generate completions
     completions_df = generate_commentary_for_players(

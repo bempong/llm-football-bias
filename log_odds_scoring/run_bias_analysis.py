@@ -119,6 +119,10 @@ def main():
     # Load completions
     print("\nLoading completions...")
     df = pd.DataFrame(pd.read_csv(args.completions_path))
+
+    ablated_df = df[df['condition'] == 'explicit']
+
+    df = ablated_df
     
     print(f"  Loaded {len(df)} completions")
     print(f"  Race distribution:")
@@ -188,3 +192,6 @@ if __name__ == "__main__":
 # python -m log_odds_scoring.run_bias_analysis \
 #     --completions-path "mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_output/llm_generations.csv"
 #     --output-dir output_results/bias_analysis_v2 \
+
+
+# python -m log_odds_scoring.run_bias_analysis --completions-path "/mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_output/llm_generations.csv" --output-dir output_ablated
