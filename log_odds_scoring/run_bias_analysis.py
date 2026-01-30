@@ -145,4 +145,10 @@ if __name__ == "__main__":
 #     --output-dir output_results/bias_analysis_v2 \
 
 
-# python -m log_odds_scoring.run_bias_analysis --completions-path "/mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_output/llm_generations.csv" --output-dir output_ablated
+# python log_odds_scoring.run_bias_analysis --completions-path "/mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_output/llm_generations.csv" --output-dir output_ablated
+
+
+# python -m log_odds_scoring.run_bias_analysis --completions-path "/mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_new_generations/output/n500_gpt-5-mini_generations_explicit.csv" --output-dir output_results/bias_analysis_v2/gpt-5-mini_explicit_generations
+
+
+# python -m log_odds_scoring.run_bias_analysis --completions-path "/mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_completions/output/n500_gpt5mini_completions/llm_completions_explicit.csv" --output-dir output_results/bias_analysis_v2/gpt-5-mini_explicit_completions

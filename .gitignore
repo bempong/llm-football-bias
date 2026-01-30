@@ -18,8 +18,6 @@ tagged_transcripts.json
 raw_transcripts.json
 retrieve_player_dataset.py
 commands.txt
-output_explicit/
-output_ablated/
-output_by_position/
 CLAUDE_MODELS.md
 OPENAI_MODEL.smd
+test_file.py

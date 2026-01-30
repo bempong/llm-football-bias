@@ -1,0 +1,13 @@
+race,category,count,total_adjective_tokens,proportion
+nonwhite,athleticism_physical,334,1520,0.21973684210526315
+nonwhite,cognitive,342,1520,0.225
+nonwhite,discipline_technical,404,1520,0.2657894736842105
+nonwhite,instinct_raw,24,1520,0.015789473684210527
+nonwhite,leadership,214,1520,0.14078947368421052
+nonwhite,work_ethic,202,1520,0.13289473684210526
+white,athleticism_physical,118,616,0.19155844155844157
+white,cognitive,101,616,0.16396103896103897
+white,discipline_technical,199,616,0.32305194805194803
+white,instinct_raw,2,616,0.003246753246753247
+white,leadership,136,616,0.22077922077922077
+white,work_ethic,60,616,0.09740259740259741

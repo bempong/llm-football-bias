@@ -19,6 +19,7 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from dotenv import load_dotenv
+import time
 
 # Load environment variables from .env file
 load_dotenv()
@@ -427,121 +428,6 @@ Stay focused on the play and this player. Do not include instructional wording i
     return prompt
 
 
-# def load_llama_model(model_name: str, device: str = "auto"):
-#     """
-#     Load LLaMA 3.1 70B Instruct from Hugging Face.
-    
-#     Args:
-#         model_name: HuggingFace model repo (e.g., "meta-llama/Llama-3.1-70B-Instruct")
-#         device: Device placement ("auto" for automatic)
-    
-#     Returns:
-#         TextGenerationPipeline object
-#     """
-#     print(f"\nLoading LLaMA model: {model_name}")
-#     print("This may take several minutes (model is ~140GB)...")
-    
-#     try:
-#         from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-#         import torch
-        
-#         # Load with authentication
-#         hf_token = os.getenv('HF_TOKEN')
-#         if not hf_token:
-#             raise ValueError("HF_TOKEN environment variable not set. Get token from https://huggingface.co/settings/tokens")
-        
-#         print("  Loading tokenizer...")
-#         tokenizer = AutoTokenizer.from_pretrained(
-#             model_name,
-#             token=hf_token
-#         )
-        
-#         print("  Loading model (this will take a while)...")
-#         model = AutoModelForCausalLM.from_pretrained(
-#             model_name,
-#             token=hf_token,
-#             device_map=device,
-#             torch_dtype=torch.bfloat16,
-#             low_cpu_mem_usage=True
-#         )
-        
-#         print("  Creating pipeline...")
-#         pipe = pipeline(
-#             "text-generation",
-#             model=model,
-#             tokenizer=tokenizer,
-#             device_map=device
-#         )
-        
-#         print("Model loaded successfully!")
-#         return pipe
-        
-#     except ImportError as e:
-#         print(f"Error: transformers or torch not installed")
-#         print("Install with: pip install transformers torch accelerate")
-#         raise
-#     except Exception as e:
-#         print(f"Error loading model: {e}")
-#         raise
-
-
-# # ============================================================================
-# # TOGETHER AI API (Recommended - hosts Llama 3.1 70B)
-# # ============================================================================
-
-# # def load_llama_api(model_name: str):
-# #     """
-# #     Use Together AI API for Llama 3.1 70B inference.
-    
-# #     Args:
-# #         model_name: Together AI model name (e.g., "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo")
-    
-# #     Returns:
-# #         Simple callable that takes prompt and returns completion
-# #     """
-# #     # Map HuggingFace names to Together AI names
-# #     together_model_map = {
-# #         'meta-llama/Meta-Llama-3.1-70B-Instruct': 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
-# #         'meta-llama/Llama-3.1-70B-Instruct': 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
-# #     }
-# #     together_model = together_model_map.get(model_name, model_name)
-    
-# #     print(f"\nUsing Together AI API for: {together_model}")
-    
-# #     try:
-# #         from together import Together
-        
-# #         api_key = os.getenv('TOGETHER_API_KEY')
-# #         if not api_key:
-# #             raise ValueError("TOGETHER_API_KEY environment variable not set. Get one at https://api.together.xyz/")
-        
-# #         client = Together(api_key=api_key)
-        
-# #         def generate(prompt: str, max_new_tokens: int = 150, 
-# #                     temperature: float = 0.8, top_p: float = 0.9) -> str:
-# #             """Generate completion using Together AI API."""
-# #             try:
-# #                 response = client.chat.completions.create(
-# #                     model=together_model,
-# #                     messages=[{"role": "user", "content": prompt}],
-# #                     max_tokens=max_new_tokens,
-# #                     temperature=temperature,
-# #                     top_p=top_p,
-# #                 )
-# #                 return response.choices[0].message.content
-# #             except Exception as e:
-# #                 print(f"Error generating: {e}")
-# #                 return f"[ERROR: {str(e)[:50]}]"
-        
-# #         print("Together AI client ready!")
-# #         return generate
-        
-# #     except ImportError:
-# #         print("Error: together not installed")
-# #         print("Install with: pip install together")
-# #         raise
-
-
 # ============================================================================
 # OPENAI API (GPT-4o, GPT-4o-mini)
 # ============================================================================
@@ -571,12 +457,21 @@ def load_openai_api(model_name: str):
                     temperature: float = 0.8, top_p: float = 0.9) -> str:
             """Generate completion using OpenAI API."""
             try:
-                response = client.chat.completions.create(
-                    model=model_name,
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=max_new_tokens,
-                    temperature=temperature,
-                    top_p=top_p,
+                if 'gpt-5' in model_name:
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=[{"role": "user", "content": prompt}],
+                        max_completion_tokens=max_new_tokens,
+                        temperature=1.0,  # Use fixed temperature for gpt-5
+                )
+                    
+                else:
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=max_new_tokens,
+                        temperature=temperature,
+                        top_p=top_p,
                 )
                 return response.choices[0].message.content
             except Exception as e:
@@ -626,19 +521,29 @@ def generate_commentary_for_players(
           example_team, model_name, sample_id, prompt_text, completion_text
     """
     print(f"\nGenerating commentary for {len(players_df)} players...")
-    print(f"  Conditions per player: 2 (explicit, ablated)")
+    # print(f"  Conditions per player: 2 (explicit, ablated)")
+    print(f"Conditions per player: 1 (explicit only)")
     print(f"  Samples per condition: {samples_per_condition}")
-    print(f"  Total generations: {len(players_df) * 2 * samples_per_condition}")
+    # print(f"  Total generations: {len(players_df) * 2 * samples_per_condition}")
+    print(f"  Total generations: {len(players_df) * 1 * samples_per_condition}")
     
     results = []
+
+    player_processing_start_time = time.time()
     
     for idx, row in tqdm(players_df.iterrows(), total=len(players_df), desc="Generating"):
         player_id = row['player_id']
+        player_i_start_time = time.time()
         
         # Two conditions
+        # conditions = [
+        #     ('explicit', True),
+        #     ('ablated', False)
+        # ]
+
+        # One condition
         conditions = [
-            ('explicit', True),
-            ('ablated', False)
+            ('explicit', True)
         ]
         
         # Get commentary start (first 1-2 sentences of real commentary)
@@ -714,6 +619,8 @@ def generate_commentary_for_players(
                         'prompt_text': prompt,
                         'completion_text': f"[ERROR: {str(e)[:50]}]"
                     })
+        player_i_end_time = time.time()
+        print(f"  Processed player {idx + 1}/{len(players_df)} in {player_i_end_time - player_i_start_time:.2f} seconds")
     
     completions_df = pd.DataFrame(results)
     
@@ -721,6 +628,9 @@ def generate_commentary_for_players(
     print(f"  By condition:\n{completions_df['condition'].value_counts()}")
     print(f"  By race:\n{completions_df['true_race'].value_counts()}")
     print(f"  By position:\n{completions_df['position'].value_counts()}")
+
+    player_processing_end_time = time.time()
+    print(f"\nTotal generation time: {player_processing_end_time - player_processing_start_time:.2f} seconds")
     
     return completions_df
 
@@ -955,3 +865,4 @@ def main():
 if __name__ == "__main__":
     main()
 
+# python generate_llm_commentary.py --use-api --api-provider openai --model-name gpt-5-mini --players-csv ../players/sampled_players.csv --output-path output/n500_gpt5mini_completions/llm_completions).csv

@@ -15,7 +15,7 @@ We analyze the extent to which LLMs exhibit racial bias when tasked with sports 
 ### 1. Install dependencies
 
 ```bash
-pip install pandas numpy scipy matplotlib tqdm python-dotenv openai
+pip install pandas numpy scipy matplotlib tqdm python-dotenv openai google-generativeai
 ```
 
 ### 2. Set up API key

@@ -28,6 +28,11 @@ USAGE EXAMPLES:
        --model-name meta-llama/Meta-Llama-3.1-70B-Instruct \
        --output-path llm_output/llm_generations.csv
 
+5. Using Google Gemini:
+python generation_api_script_with_gemini.py --api-provider google \
+       --model-name gemini-1.5-flash \
+       --output-path llm_output/gemini_1.5_generations.csv
+
 SETUP:
 1. Copy .env.example to .env
 2. Add your API key(s) to .env:
@@ -67,13 +72,13 @@ np.random.seed(42)
 # CONFIGURATION
 # ============================================================================
 
-SMALL_SIZE = 10  # For testing
+SMALL_SIZE = 5  # For testing
 
 DEFAULT_CONFIG = {
     'output_path': 'output/llm_generations.csv',
     'model_name': 'gpt-4o-mini',  # Default to OpenAI GPT-4o-mini
     'samples_per_condition': 1,  # How many completions per (player, condition)
-    'max_new_tokens': 150,
+    'max_new_tokens': 1000,
     'temperature': 0.8,
     'top_p': 0.9
 }
@@ -205,16 +210,25 @@ def load_openai_api(model_name: str):
 
         client = OpenAI(api_key=api_key)
 
-        def generate(prompt: str, max_new_tokens: int = 150,
+        def generate(prompt: str, max_new_tokens: int = 1000,
                     temperature: float = 0.8, top_p: float = 0.9) -> str:
             """Generate completion using OpenAI API."""
             try:
-                response = client.chat.completions.create(
-                    model=model_name,
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=max_new_tokens,
-                    temperature=temperature,
-                    top_p=top_p,
+                if 'gpt-5' in model_name:
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=[{"role": "user", "content": prompt}],
+                        max_completion_tokens=max_new_tokens,
+                        temperature=1.0,  # Use fixed temperature for gpt-5
+                )
+                    
+                else:
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=max_new_tokens,
+                        temperature=temperature,
+                        top_p=top_p,
                 )
                 return response.choices[0].message.content
             except Exception as e:
@@ -336,6 +350,123 @@ def load_together_api(model_name: str):
         print("Install with: pip install together")
         raise
 
+# ============================================================================
+# OLLAMA API (for local LLaMA and other models)
+# ============================================================================
+
+def load_ollama_api(model_name: str):
+    """
+    Use Ollama for local LLaMA and other models.
+
+    Args:
+        model_name: Ollama model name (e.g., "llama3.1:8b", "llama3.1:70b")
+
+    Returns:
+        Simple callable that takes prompt and returns completion
+    """
+    print(f"\nUsing Ollama (local) for: {model_name}")
+
+    try:
+        import requests
+        
+        # Test if Ollama is running
+        try:
+            requests.get('http://localhost:11434/api/tags', timeout=2)
+        except:
+            raise ValueError(
+                "Ollama not running. Start it with: ollama serve\n"
+                f"Then pull the model with: ollama pull {model_name}"
+            )
+
+        def generate(prompt: str, max_new_tokens: int = 150,
+                    temperature: float = 0.8, top_p: float = 0.9) -> str:
+            """Generate completion using Ollama API."""
+            try:
+                response = requests.post(
+                    'http://localhost:11434/api/generate',
+                    json={
+                        'model': model_name,
+                        'prompt': prompt,
+                        'stream': False,
+                        'options': {
+                            'temperature': temperature,
+                            'top_p': top_p,
+                            'num_predict': max_new_tokens
+                        }
+                    },
+                    timeout=120
+                )
+                return response.json()['response']
+            except Exception as e:
+                print(f"Error generating: {e}")
+                return f"[ERROR: {str(e)[:50]}]"
+
+        print("Ollama client ready!")
+        return generate
+
+    except ImportError:
+        print("Error: requests not installed")
+        print("Install with: pip install requests")
+        raise
+
+# ============================================================================
+# GOOGLE GEMINI API
+# ============================================================================
+
+def load_google_api(model_name: str):
+    """
+    Use Google Generative AI API for Gemini models.
+
+    Args:
+        model_name: Google model name (e.g., "gemini-1.5-flash", "gemini-2.5-flash", "gemini-1.5-pro")
+
+    Returns:
+        Simple callable that takes prompt and returns completion
+    """
+    print(f"\nUsing Google Gemini API for: {model_name}")
+
+    try:
+        import google.generativeai as genai
+
+        api_key = os.getenv('GOOGLE_API_KEY')
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY environment variable not set. Get one at https://aistudio.google.com/app/apikey")
+
+        genai.configure(api_key=api_key)
+
+        # Create the model
+        model = genai.GenerativeModel(model_name)
+
+        def generate(prompt: str, max_new_tokens: int = 1000,
+                    temperature: float = 0.8, top_p: float = 0.9) -> str:
+            """Generate completion using Google Gemini API."""
+            try:
+                # Configure generation parameters
+                generation_config = genai.types.GenerationConfig(
+                    max_output_tokens=max_new_tokens,
+                    temperature=temperature,
+                    top_p=top_p,
+                )
+
+                # Generate content
+                response = model.generate_content(
+                    prompt,
+                    generation_config=generation_config
+                )
+                
+                return response.text
+            except Exception as e:
+                print(f"Error generating: {e}")
+                return f"[ERROR: {str(e)[:50]}]"
+
+        print("Google Gemini client ready!")
+        return generate
+
+    except ImportError:
+        print("Error: google-generativeai not installed")
+        print("Install with: pip install google-generativeai")
+        raise
+
 
 # ============================================================================
 # GENERATION LOOP
@@ -346,7 +477,7 @@ def generate_commentary_for_players(
     generator,  # API callable
     model_name: str,
     samples_per_condition: int = 1,
-    max_new_tokens: int = 150,
+    max_new_tokens: int = 1000,
     temperature: float = 0.8,
     top_p: float = 0.9
 ) -> pd.DataFrame:
@@ -368,7 +499,8 @@ def generate_commentary_for_players(
           example_team, model_name, sample_id, prompt_text, completion_text
     """
     print(f"\nGenerating commentary for {len(players_df)} players...")
-    print(f"  Conditions per player: 2 (explicit, ablated)")
+    # print(f"  Conditions per player: 2 (explicit, ablated)")
+    print(f"Conditions per player: 1 (explicit only)")
     print(f"  Samples per condition: {samples_per_condition}")
     print(f"  Total generations: {len(players_df) * 2 * samples_per_condition}")
     
@@ -381,9 +513,14 @@ def generate_commentary_for_players(
         player_i_start_time = time.time()
         
         # Two conditions
+        # conditions = [
+        #     ('explicit', True),
+        #     ('ablated', False)
+        # ]
+
+        # One condition
         conditions = [
-            ('explicit', True),
-            ('ablated', False)
+            ('explicit', True)
         ]
         
         for condition_name, include_race in conditions:
@@ -490,8 +627,8 @@ def main():
                        default=DEFAULT_CONFIG['samples_per_condition'],
                        help='Number of completions per (player, condition)')
     parser.add_argument('--api-provider', type=str, default='openai',
-                       choices=['openai', 'anthropic', 'together'],
-                       help='API provider to use: openai (default), anthropic, or together')
+                   choices=['openai', 'anthropic', 'together', 'google', 'ollama'],
+                   help='API provider to use: openai (default), anthropic, together, google, or ollama')
     parser.add_argument('--max-new-tokens', type=int, default=DEFAULT_CONFIG['max_new_tokens'],
                        help='Max tokens to generate')
     parser.add_argument('--temperature', type=float, default=DEFAULT_CONFIG['temperature'],
@@ -508,9 +645,11 @@ def main():
     print(f"  Output: {args.output_path}")
     print(f"  Model: {args.model_name}")
     print(f"  Samples per condition: {args.samples_per_condition}")
+    print(f"  Max new tokens: {args.max_new_tokens}")
     
     csv_path = "/players/sampled_players.csv"
     players_df = pd.read_csv(os.getcwd() + csv_path)
+
     print(f"\nLoaded {len(players_df)} sampled players from {csv_path}")
 
     ###########################################################################
@@ -529,6 +668,10 @@ def main():
         generator = load_anthropic_api(args.model_name)
     elif args.api_provider == 'together':
         generator = load_together_api(args.model_name)
+    elif args.api_provider == 'ollama':
+        generator = load_ollama_api(args.model_name)
+    elif args.api_provider == 'google':
+        generator = load_google_api(args.model_name)
     else:
         raise ValueError(f"Unknown API provider: {args.api_provider}")
 
@@ -570,3 +713,17 @@ if __name__ == "__main__":
 # ============================================================================
 
 # python llm_new_generations/generation_api_script.py --model-name gpt-4o-mini --output-path llm_new_generations/output/llm_generations.csv
+
+# python llm_new_generations/generation_api_script.py --model-name gpt-5-mini --output-path llm_new_generations/output/gpt-5-mini-explicit.csv
+
+# python llm_new_generations/generation_api_script.py --api-provider google --model-name gemini-2.5-flash-lite --output-path llm_new_generations/output/gemini_generations.csv
+
+# python llm_new_generations/generation_api_script.py --api-provider google --model-name gemini-2.5-flash-lite-preview-09-2025 --output-path llm_new_generations/output/gemini_generations.csv
+
+# python llm_new_generations/generation_api_script.py --api-provider google --model-name gemini-2.0-flash-lite --output-path llm_new_generations/output/gemini_generations.csv
+
+
+
+
+
+
