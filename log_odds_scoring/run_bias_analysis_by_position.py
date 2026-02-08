@@ -17,10 +17,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from . import config
 from .log_odds_scoring import compute_log_odds_by_race
-from .adjective_categories import (
-    compute_adjective_category_stats,
-    create_category_pivot_table
-)
+# from .adjective_categories import (
+#     compute_adjective_category_stats,
+#     create_category_pivot_table
+# )
 from create_plots import generate_all_plots
 
 
@@ -56,8 +56,8 @@ def print_summary(log_odds_df: pd.DataFrame, category_stats_df: pd.DataFrame, po
     print("\n" + "-" * 80)
     print(f"POSITION {position}: ADJECTIVE CATEGORY PROPORTIONS BY RACE")
     print("-" * 80)
-    pivot = create_category_pivot_table(category_stats_df)
-    print(pivot.to_string())
+    # pivot = create_category_pivot_table(category_stats_df)
+    # print(pivot.to_string())
 
     print("\n" + "-" * 80)
 
@@ -149,9 +149,8 @@ def analyze_position(
         figures_dir = position_output_dir / "figures"
         try:
             generate_all_plots(
-                str(log_odds_path),
-                str(category_stats_path) if not category_stats_df.empty else None,
-                str(figures_dir),
+                log_odds_path=str(log_odds_path),
+                output_dir=str(figures_dir),
                 top_n_words=top_n_words,
                 z_threshold=z_threshold
             )
