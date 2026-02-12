@@ -647,7 +647,7 @@ def main():
     print(f"  Samples per condition: {args.samples_per_condition}")
     print(f"  Max new tokens: {args.max_new_tokens}")
     
-    csv_path = "/players/sampled_players.csv"
+    csv_path = "/players_new/sampled_players.csv"
     players_df = pd.read_csv(os.getcwd() + csv_path)
 
     print(f"\nLoaded {len(players_df)} sampled players from {csv_path}")

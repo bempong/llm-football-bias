@@ -2,7 +2,7 @@
 """
 Position-Specific Bias Analysis
 
-Runs bias analysis separately for each position (QB, RB, WR, DEF).
+Runs bias analysis separately for each position (QB, RB, WR, TE, OL, DB, LB, DL, ST)
 This allows us to see if bias patterns differ by position.
 """
 
@@ -35,18 +35,18 @@ def print_summary(log_odds_df: pd.DataFrame, category_stats_df: pd.DataFrame, po
     """Print a brief summary of results for a position."""
 
     print("\n" + "-" * 80)
-    print(f"POSITION {position}: TOP 15 WORDS MOST ASSOCIATED WITH {config.RACE_GROUP_A.upper()}")
+    print(f"POSITION {position}: TOP 5 WORDS MOST ASSOCIATED WITH {config.RACE_GROUP_A.upper()}")
     print("-" * 80)
-    top_a = log_odds_df[log_odds_df['z_score'] > 0].head(15)
+    top_a = log_odds_df[log_odds_df['z_score'] > 0].head(5)
     for _, row in top_a.iterrows():
         print(f"  {row['word']:20s} z={row['z_score']:6.2f}  "
               f"({config.RACE_GROUP_A}: {row['count_a']:3d}, "
               f"{config.RACE_GROUP_B}: {row['count_b']:3d})")
 
     print("\n" + "-" * 80)
-    print(f"POSITION {position}: TOP 15 WORDS MOST ASSOCIATED WITH {config.RACE_GROUP_B.upper()}")
+    print(f"POSITION {position}: TOP 5 WORDS MOST ASSOCIATED WITH {config.RACE_GROUP_B.upper()}")
     print("-" * 80)
-    top_b = log_odds_df[log_odds_df['z_score'] < 0].head(15)
+    top_b = log_odds_df[log_odds_df['z_score'] < 0].head(5)
     for _, row in top_b.iterrows():
         print(f"  {row['word']:20s} z={row['z_score']:6.2f}  "
               f"({config.RACE_GROUP_A}: {row['count_a']:3d}, "
@@ -102,10 +102,6 @@ def analyze_position(
         print(f"\n⚠️  Warning: Only one race found in {position} data. Skipping analysis.")
         return
 
-    # Create position-specific output directory
-    position_output_dir = output_dir / position.lower()
-    position_output_dir.mkdir(parents=True, exist_ok=True)
-
     # Compute log-odds ratios
     print(f"\nComputing log-odds ratios for {position}...")
 
@@ -116,7 +112,8 @@ def analyze_position(
             race_col=race_col
         )
 
-        log_odds_path = position_output_dir / "log_odds_results.csv"
+        log_odds_path = output_dir / "tables" / f"log_odds_tables_{position.lower()}.csv"
+        log_odds_path.parent.mkdir(parents=True, exist_ok=True)
         log_odds_df.to_csv(log_odds_path, index=False)
         print(f"✓ Saved log-odds results to: {log_odds_path}")
     except Exception as e:
@@ -146,13 +143,14 @@ def analyze_position(
 
     # Generate plots (unless --no-plots flag is set)
     if not no_plots and not log_odds_df.empty:
-        figures_dir = position_output_dir / "figures"
+        figures_dir = output_dir / "figures"
         try:
             generate_all_plots(
                 log_odds_path=str(log_odds_path),
                 output_dir=str(figures_dir),
                 top_n_words=top_n_words,
-                z_threshold=z_threshold
+                z_threshold=z_threshold,
+                position=position
             )
             print(f"✓ Generated plots in: {figures_dir}")
         except Exception as e:
@@ -203,7 +201,7 @@ def main():
     parser.add_argument(
         '--top-n-words',
         type=int,
-        default=20,
+        default=15,
         help='Number of top words to show in plots (default: 15)'
     )
     parser.add_argument(
@@ -240,7 +238,7 @@ def main():
     print(f"  Loaded {len(df)} completions")
 
     # Define positions to analyze
-    positions = ['QB', 'RB', 'WR', 'DEF']
+    positions = ['QB', 'RB', 'WR', 'TE', 'OL', 'DB', 'LB', 'DL', 'ST']
 
     # Overall statistics
     print("\n" + "=" * 80)
@@ -257,7 +255,7 @@ def main():
     print(df[args.race_col].value_counts().to_string())
 
     # Analyze each position
-    for position in positions:
+    for position in positions:  # Updated to include all new positions
         analyze_position(
             df=df,
             position=position,
@@ -274,15 +272,34 @@ def main():
     print("POSITION-SPECIFIC ANALYSIS COMPLETE")
     print("=" * 80)
     print(f"\nResults saved to: {output_dir}/")
+
+    # PRINT RACE DISTRIBUTION FOR EACH POSITION
+    print("\n" + "=" * 80)
+    print("RACE DISTRIBUTION BY POSITION")
+    print("=" * 80)
+
+    distributions_dir = output_dir / "distributions"
+    distributions_dir.mkdir(parents=True, exist_ok=True)
+
+    # Write results to distributions directory to ONE CSV file
+    all_distributions = []
     for position in positions:
-        pos_dir = output_dir / position.lower()
-        if pos_dir.exists():
-            print(f"\n{position}:")
-            print(f"  {pos_dir}/log_odds_results.csv")
-            print(f"  {pos_dir}/adjective_category_stats.csv")
-            if not args.no_plots:
-                print(f"  {pos_dir}/figures/")
+        pos_df = df[df['position'] == position]
+        if not pos_df.empty:
+            dist = pos_df[args.race_col].value_counts()
+            dist.name = position
+            all_distributions.append(dist)
+
+    if all_distributions:
+        combined_df = pd.concat(all_distributions, axis=1).fillna(0)
+        combined_path = distributions_dir / "combined_race_distributions.csv"
+        combined_df.to_csv(combined_path)
+        print(f"✓ Combined race distributions saved to: {combined_path}")
+
 
 
 if __name__ == "__main__":
     main()
+
+
+# python -m log_odds_scoring.run_bias_analysis_by_position --completions-path "/mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_new_generations/output/llm_generations_4o_full.csv" --output-dir output_results/bias_analysis_v3/gpt-4o-mini-full-position --z-threshold 1.0

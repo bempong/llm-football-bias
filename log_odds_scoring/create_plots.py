@@ -78,7 +78,8 @@ def generate_all_plots(
     log_odds_path: str,
     output_dir: str,
     top_n_words: int = 15,
-    z_threshold: float = 1.96
+    z_threshold: float = 1.96,
+    position: str = None
 ):
     """
     Generate publication-quality plots for log-odds analysis.
@@ -108,7 +109,7 @@ def generate_all_plots(
     # Distinctive words plot
     create_distinctive_words_plot(
         log_odds_df,
-        str(figures_dir / "distinctive_words_by_race.png"),
+        str(figures_dir / f"distinctive_words_by_race_{position}.png"),
         top_n=top_n_words,
         z_threshold=z_threshold
     )
