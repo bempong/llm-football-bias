@@ -237,8 +237,9 @@ def main():
 
     print(f"  Loaded {len(df)} completions")
 
-    # Define positions to analyze
-    positions = ['QB', 'RB', 'WR', 'TE', 'OL', 'DB', 'LB', 'DL', 'ST']
+    # Get positions dynamically from data
+    position_counts = df['position'].value_counts()
+    positions = position_counts.index.tolist()
 
     # Overall statistics
     print("\n" + "=" * 80)
@@ -246,7 +247,6 @@ def main():
     print("=" * 80)
     print(f"\nTotal completions: {len(df)}")
     print(f"\nPosition distribution:")
-    position_counts = df['position'].value_counts()
     for pos in positions:
         count = position_counts.get(pos, 0)
         print(f"  {pos}: {count}")

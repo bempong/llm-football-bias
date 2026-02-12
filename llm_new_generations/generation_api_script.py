@@ -635,6 +635,8 @@ def main():
                        help='Sampling temperature')
     parser.add_argument('--top-p', type=float, default=DEFAULT_CONFIG['top_p'],
                        help='Top-p sampling (nucleus sampling)')
+    parser.add_argument('--players-csv', type=str, default=None,
+                       help='Path to custom players CSV (default: players/sampled_players.csv)')
 
     args = parser.parse_args()
     
@@ -647,8 +649,11 @@ def main():
     print(f"  Samples per condition: {args.samples_per_condition}")
     print(f"  Max new tokens: {args.max_new_tokens}")
     
-    csv_path = "/players_new/sampled_players.csv"
-    players_df = pd.read_csv(os.getcwd() + csv_path)
+    if args.players_csv:
+        csv_path = args.players_csv
+    else:
+        csv_path = os.getcwd() + "/players_new/sampled_players.csv"
+    players_df = pd.read_csv(csv_path)
 
     print(f"\nLoaded {len(players_df)} sampled players from {csv_path}")
 
