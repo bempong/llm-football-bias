@@ -303,3 +303,5 @@ if __name__ == "__main__":
 
 
 # python -m log_odds_scoring.run_bias_analysis_by_position --completions-path "/mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_new_generations/output/llm_generations_4o_full.csv" --output-dir output_results/bias_analysis_v3/gpt-4o-mini-full-position --z-threshold 1.0
+
+# python -m log_odds_scoring.run_bias_analysis --completions-path "/mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_new_generations/output/llm_generations_4o_full.csv" --output-dir output_results/bias_analysis_v2/llama-8b-explicit-generations
