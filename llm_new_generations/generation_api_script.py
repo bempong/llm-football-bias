@@ -147,6 +147,12 @@ def make_player_profile(row: pd.Series, include_race: bool) -> str:
         'QB': 'quarterback',
         'RB': 'running back',
         'WR': 'wide receiver',
+        'TE': 'tight end',
+        'OL': 'offensive lineman',
+        'DB': 'defensive back',
+        'LB': 'linebacker',
+        'DL': 'defensive lineman',
+        'ST': 'special teams player',
         'DEF': 'defensive player'
     }.get(row['player_position'], row['player_position'].lower())
     
