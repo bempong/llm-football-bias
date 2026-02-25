@@ -35,18 +35,18 @@ def print_summary(log_odds_df: pd.DataFrame, category_stats_df: pd.DataFrame, po
     """Print a brief summary of results for a position."""
 
     print("\n" + "-" * 80)
-    print(f"POSITION {position}: TOP 5 WORDS MOST ASSOCIATED WITH {config.RACE_GROUP_A.upper()}")
+    print(f"POSITION {position}: TOP 20 WORDS MOST ASSOCIATED WITH {config.RACE_GROUP_A.upper()}")
     print("-" * 80)
-    top_a = log_odds_df[log_odds_df['z_score'] > 0].head(5)
+    top_a = log_odds_df.head(20)
     for _, row in top_a.iterrows():
         print(f"  {row['word']:20s} z={row['z_score']:6.2f}  "
               f"({config.RACE_GROUP_A}: {row['count_a']:3d}, "
               f"{config.RACE_GROUP_B}: {row['count_b']:3d})")
 
     print("\n" + "-" * 80)
-    print(f"POSITION {position}: TOP 5 WORDS MOST ASSOCIATED WITH {config.RACE_GROUP_B.upper()}")
+    print(f"POSITION {position}: TOP 20 WORDS MOST ASSOCIATED WITH {config.RACE_GROUP_B.upper()}")
     print("-" * 80)
-    top_b = log_odds_df[log_odds_df['z_score'] < 0].head(5)
+    top_b = log_odds_df.nsmallest(20, 'z_score')
     for _, row in top_b.iterrows():
         print(f"  {row['word']:20s} z={row['z_score']:6.2f}  "
               f"({config.RACE_GROUP_A}: {row['count_a']:3d}, "
@@ -304,4 +304,4 @@ if __name__ == "__main__":
 
 # python -m log_odds_scoring.run_bias_analysis_by_position --completions-path "/mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_new_generations/output/llm_generations_4o_full.csv" --output-dir output_results/bias_analysis_v3/gpt-4o-mini-full-position --z-threshold 1.0
 
-# python -m log_odds_scoring.run_bias_analysis --completions-path "/mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_new_generations/output/llm_generations_4o_full.csv" --output-dir output_results/bias_analysis_v2/llama-8b-explicit-generations
+# python -m log_odds_scoring.run_bias_analysis --completions-path "/mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_new_generations/output/llm_generations_4o_full.csv" --output-dir output_results/bias_analysis_v3/gpt-4o-mini-full

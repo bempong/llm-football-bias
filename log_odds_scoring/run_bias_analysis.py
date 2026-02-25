@@ -26,16 +26,16 @@ def print_summary(log_odds_df: pd.DataFrame):
     print("\n" + "-" * 80)
     print(f"TOP 20 WORDS MOST ASSOCIATED WITH {config.RACE_GROUP_A.upper()}")
     print("-" * 80)
-    top_a = log_odds_df[log_odds_df['z_score'] > 0].head(20)
+    top_a = log_odds_df.head(20)
     for _, row in top_a.iterrows():
         print(f"  {row['word']:20s} z={row['z_score']:6.2f}  "
               f"({config.RACE_GROUP_A}: {row['count_a']:3d}, "
               f"{config.RACE_GROUP_B}: {row['count_b']:3d})")
-    
+
     print("\n" + "-" * 80)
     print(f"TOP 20 WORDS MOST ASSOCIATED WITH {config.RACE_GROUP_B.upper()}")
     print("-" * 80)
-    top_b = log_odds_df[log_odds_df['z_score'] < 0].head(20)
+    top_b = log_odds_df.nsmallest(20, 'z_score')
     for _, row in top_b.iterrows():
         print(f"  {row['word']:20s} z={row['z_score']:6.2f}  "
               f"({config.RACE_GROUP_A}: {row['count_a']:3d}, "

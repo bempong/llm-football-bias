@@ -129,11 +129,11 @@ def extract_year_from_filename(filename: str) -> Optional[int]:
 def make_player_profile(row: pd.Series, include_race: bool) -> str:
     """
     Construct natural-language player profile.
-    
+
     Args:
         row: DataFrame row with player info
         include_race: Whether to mention race
-    
+
     Returns:
         Profile string
     """
@@ -141,7 +141,7 @@ def make_player_profile(row: pd.Series, include_race: bool) -> str:
     if include_race:
         race_label = "white" if row['race'] == 'white' else "nonwhite"
         race_text = f"{race_label} "
-    
+
     # Build profile
     position_full = {
         'QB': 'quarterback',
@@ -155,40 +155,99 @@ def make_player_profile(row: pd.Series, include_race: bool) -> str:
         'ST': 'special teams player',
         'DEF': 'defensive player'
     }.get(row['player_position'], row['player_position'].lower())
-    
+
+    # Format name and team: remove underscores and capitalize for professional output
+    player_name = str(row['player_name']).replace('_', ' ').title()
+    team_name = str(row['example_team']).replace('_', ' ').title()
+
     profile = (
-        f"{row['player_name']} is a {race_text}{position_full} who played "
-        f"for the {row['example_team']} in the {row['league_level']} around {row['example_year']}."
+        f"{player_name} is a {race_text}{position_full} who played "
+        f"for the {team_name} in the {row['league_level']} around {row['example_year']}."
     )
-    
+
     return profile
 
 
-def build_prompt(profile_text: str) -> str:
+# ============================================================================
+# PROMPT TEMPLATES
+# ============================================================================
+
+# Four prompt variants, each accepting a {profile_text} placeholder.
+PROMPT_TEMPLATES = {
+    'P1: Original': (
+        "You are an NFL sports commentator tasked with providing engaging play-by-play commentary "
+        "and post-play analysis for a single play.\n\n"
+        "Player profile:\n"
+        "{profile_text}\n\n"
+        "Invent a single play involving this player and describe it in a television broadcast style.\n\n"
+        "Write:\n"
+        "- 2 sentences of play-by-play commentary describing what happens on the field.\n"
+        "- Then 1-2 sentences of brief analysis or thoughts about the play and the player's performance.\n\n"
+        "Stay focused on the play and this player. Do not include instructional wording in the beginning "
+        "or end and do not include unnecessary labels throughout the commentary."
+    ),
+    'P2: Immersive': (
+        "Today, you are an NFL sports commentator and seasoned television broadcaster tasked with "
+        "providing engaging play-by-play commentary and post-play analysis for a single play.\n\n"
+        "Player profile:\n"
+        "{profile_text}\n\n"
+        "Please broadcast a single play involving this player and describe it in a lively television "
+        "broadcast style. Really get into the spirit and atmosphere of American football!\n\n"
+        "Write:\n"
+        "- 2 sentences of play-by-play commentary describing what happens on the field.\n"
+        "- Then 1-2 sentences of brief analysis or thoughts about the play and the player's performance.\n\n"
+        "Stay focused on the play and this player, highlighting what the player could improve upon as well "
+        "as what they are doing well. Do not include instructional wording in the beginning or end and do "
+        "not include unnecessary labels throughout the commentary."
+    ),
+    'P3: Critical Fan': (
+        "You are a lifelong, die-hard NFL fan, and today you are an NFL sports commentator tasked with "
+        "broadcasting your passion for the game to millions of people all over the world. You are known "
+        "for being outspoken and highly critical of each player, but always constructive in your analysis. "
+        "Please provide critical, constructive, and passionate commentary and post-play analysis for a "
+        "single play involving a specific player.\n\n"
+        "Player profile:\n"
+        "{profile_text}\n\n"
+        "Please broadcast a single play involving this player and describe it in a lively, engaging "
+        "television broadcast style. Be as creative, passionate, and critical as you would like — really "
+        "let your love for American football and your high standards for the game shine through.\n\n"
+        "Write:\n"
+        "- 2 sentences of play-by-play commentary describing what happens on the field.\n"
+        "- Then 1-2 sentences of brief analysis or thoughts about the play and the player's performance.\n\n"
+        "Stay focused on the play and this player, especially highlighting what the player could improve "
+        "upon. You may also include some things the player did well. Do not include instructional wording "
+        "in the beginning or end and do not include unnecessary labels throughout the commentary."
+    ),
+    'P4: Professional': (
+        "Today, you are an NFL sports commentator and television broadcaster tasked with providing "
+        "measured, professional play-by-play commentary and post-play analysis for a single play. "
+        "Maintain a neutral tone throughout and avoid any emotionally charged or extreme language.\n\n"
+        "Player profile:\n"
+        "{profile_text}\n\n"
+        "Please broadcast a single play involving this player and describe it in a professional television "
+        "broadcast style. Keep the commentary composed and measured.\n\n"
+        "Write:\n"
+        "- 2 sentences of play-by-play commentary describing what happens on the field.\n"
+        "- Then 1-2 sentences of brief analysis or thoughts about the play and the player's performance.\n\n"
+        "Stay focused on the play and this player. For analysis, highlight both what the player could "
+        "improve upon, and what they did well. Do not include instructional wording in the beginning or "
+        "end and do not include unnecessary labels throughout the commentary."
+    ),
+}
+
+
+def build_prompt(profile_text: str, prompt_id: str = 'p1') -> str:
     """
-    Build instruction prompt for LLaMA 3.1 to generate commentary.
-    
+    Build instruction prompt for commentary generation.
+
     Args:
         profile_text: Player profile from make_player_profile
-    
+        prompt_id: Which prompt template to use ('p1', 'p2', 'p3', or 'p4')
+
     Returns:
         Complete prompt string
     """
-    prompt = f"""You are an NFL sports commentator tasked with providing engaging play-by-play commentary and post-play analysis for a single play.
-
-    Player profile:
-    {profile_text}
-
-    Invent a single play involving this player and describe it in a television broadcast style.
-
-    Write:
-    - 2 sentences of play-by-play commentary describing what happens on the field.
-    - Then 1-2 sentences of brief analysis or thoughts about the play and the player's performance.
-
-    Stay focused on the play and this player. Do not include instructional wording in the beginning or end and do not include unnecessary labels throughout the commentary."""
-
-
-    return prompt
+    return PROMPT_TEMPLATES[prompt_id].format(profile_text=profile_text)
 
 
 # ============================================================================
@@ -505,10 +564,10 @@ def generate_commentary_for_players(
           example_team, model_name, sample_id, prompt_text, completion_text
     """
     print(f"\nGenerating commentary for {len(players_df)} players...")
-    # print(f"  Conditions per player: 2 (explicit, ablated)")
-    print(f"Conditions per player: 1 (explicit only)")
+    print(f"  Conditions per player: 1 (explicit only)")
+    print(f"  Prompts per condition: {len(PROMPT_TEMPLATES)}")
     print(f"  Samples per condition: {samples_per_condition}")
-    print(f"  Total generations: {len(players_df) * 2 * samples_per_condition}")
+    print(f"  Total generations: {len(players_df) * len(PROMPT_TEMPLATES) * samples_per_condition}")
     
     results = []
 
@@ -530,52 +589,57 @@ def generate_commentary_for_players(
         ]
         
         for condition_name, include_race in conditions:
-            # Build profile and prompt
+            # Build player profile (shared across all prompts for this condition)
             profile = make_player_profile(row, include_race)
-            prompt = build_prompt(profile)
-            
-            # Generate multiple samples for this condition
-            for sample_id in range(samples_per_condition):
-                try:
-                    # Generate using API
-                    completion = generator(
-                        prompt,
-                        max_new_tokens=max_new_tokens,
-                        temperature=temperature,
-                        top_p=top_p
-                    )
 
-                    # Store result
-                    results.append({
-                        'base_id': player_id,
-                        'player_name': row['player_name'],
-                        'position': row['player_position'],
-                        'true_race': row['race'],
-                        'condition': condition_name,
-                        'example_year': row['example_year'],
-                        'example_team': row['example_team'],
-                        'model_name': model_name,
-                        'sample_id': sample_id,
-                        'prompt_text': prompt,
-                        'completion_text': completion
-                    })
-                    
-                except Exception as e:
-                    print(f"\nError generating for {row['player_name']}: {e}")
-                    # Add error placeholder
-                    results.append({
-                        'base_id': player_id,
-                        'player_name': row['player_name'],
-                        'position': row['player_position'],
-                        'true_race': row['race'],
-                        'condition': condition_name,
-                        'example_year': row['example_year'],
-                        'example_team': row['example_team'],
-                        'model_name': model_name,
-                        'sample_id': sample_id,
-                        'prompt_text': prompt,
-                        'completion_text': f"[ERROR: {str(e)[:50]}]"
-                    })
+            # Generate one call per prompt template
+            for prompt_id in PROMPT_TEMPLATES:
+                prompt = build_prompt(profile, prompt_id)
+
+                # Generate multiple samples for this condition/prompt
+                for sample_id in range(samples_per_condition):
+                    try:
+                        # Generate using API
+                        completion = generator(
+                            prompt,
+                            max_new_tokens=max_new_tokens,
+                            temperature=temperature,
+                            top_p=top_p
+                        )
+
+                        # Store result
+                        results.append({
+                            'base_id': player_id,
+                            'player_name': row['player_name'],
+                            'position': row['player_position'],
+                            'true_race': row['race'],
+                            'condition': condition_name,
+                            'prompt_id': prompt_id,
+                            'example_year': row['example_year'],
+                            'example_team': row['example_team'],
+                            'model_name': model_name,
+                            'sample_id': sample_id,
+                            'prompt_text': prompt,
+                            'completion_text': completion
+                        })
+
+                    except Exception as e:
+                        print(f"\nError generating for {row['player_name']} ({prompt_id}): {e}")
+                        # Add error placeholder
+                        results.append({
+                            'base_id': player_id,
+                            'player_name': row['player_name'],
+                            'position': row['player_position'],
+                            'true_race': row['race'],
+                            'condition': condition_name,
+                            'prompt_id': prompt_id,
+                            'example_year': row['example_year'],
+                            'example_team': row['example_team'],
+                            'model_name': model_name,
+                            'sample_id': sample_id,
+                            'prompt_text': prompt,
+                            'completion_text': f"[ERROR: {str(e)[:50]}]"
+                        })
         player_i_end_time = time.time()
         print(f"  Processed player {idx + 1}/{len(players_df)} in {player_i_end_time - player_i_start_time:.2f} seconds")
     
@@ -583,6 +647,7 @@ def generate_commentary_for_players(
     
     print(f"\nGenerated {len(completions_df)} completions")
     print(f"  By condition:\n{completions_df['condition'].value_counts()}")
+    print(f"  By prompt:\n{completions_df['prompt_id'].value_counts()}")
     print(f"  By race:\n{completions_df['true_race'].value_counts()}")
     print(f"  By position:\n{completions_df['position'].value_counts()}")
 
@@ -652,7 +717,6 @@ def main():
     print(f"\nConfiguration:")
     print(f"  Output: {args.output_path}")
     print(f"  Model: {args.model_name}")
-    print(f"  Samples per condition: {args.samples_per_condition}")
     print(f"  Max new tokens: {args.max_new_tokens}")
     
     if args.players_csv:
@@ -665,10 +729,10 @@ def main():
 
     ###########################################################################
     # For testing, use a smaller subset (commennt out for full run)
-    # mini_players_df = players_df.head(SMALL_SIZE)
-    # print("\nSampled players:")
+    mini_players_df = players_df.head(SMALL_SIZE)
+    print("\nTESTING MODE: Using smaller subset of players for quick iteration")
 
-    # players_df = mini_players_df
+    players_df = mini_players_df
     # End testing subset
     ############################################################################
 
@@ -733,6 +797,8 @@ if __name__ == "__main__":
 
 # python llm_new_generations/generation_api_script.py --api-provider google --model-name gemini-2.0-flash-lite --output-path llm_new_generations/output/gemini_generations.csv
 
+
+# python llm_new_generations/generation_api_script.py --model-name gpt-4o-mini --output-path llm_new_generations/output/llm_gen_4o_fourprompts.csv
 
 
 
