@@ -3,7 +3,7 @@
 LLM Commentary Generation for Racial Bias Experiment
 
 This script generates synthetic football commentary for real players from
-the 1990-2019 dataset, with race-explicit and race-ablated conditions.
+the 1960-2026 dataset, with race-explicit and race-ablated conditions.
 
 Output: CSV file ready for bias_scoring engine (perplexity/atypicality scoring).
 
@@ -541,6 +541,7 @@ def generate_commentary_for_players(
     players_df: pd.DataFrame,
     generator,  # API callable
     model_name: str,
+    output_path: str,
     samples_per_condition: int = 1,
     max_new_tokens: int = 1000,
     temperature: float = 0.8,
@@ -549,10 +550,15 @@ def generate_commentary_for_players(
     """
     Generate commentary for each player under multiple conditions.
 
+    Saves each result to output_path immediately after generation.
+    On restart, skips any (base_id, condition, prompt_id, sample_id) combos
+    already present in the output file.
+
     Args:
         players_df: Sampled players (from sample_player_position_combos)
         generator: API callable function
         model_name: Model identifier
+        output_path: CSV path to write results to (appended incrementally)
         samples_per_condition: Number of samples per (player, condition)
         max_new_tokens: Max tokens to generate
         temperature: Sampling temperature
@@ -563,97 +569,102 @@ def generate_commentary_for_players(
         - base_id, player_name, position, true_race, condition, example_year,
           example_team, model_name, sample_id, prompt_text, completion_text
     """
+    # Load already-completed keys so we can resume after a crash
+    out_file = Path(output_path)
+    out_file.parent.mkdir(parents=True, exist_ok=True)
+
+    completed_keys = set()
+    if out_file.exists():
+        existing = pd.read_csv(out_file)
+        completed_keys = set(
+            zip(existing['base_id'], existing['condition'],
+                existing['prompt_id'], existing['sample_id'])
+        )
+        print(f"\nResuming: found {len(completed_keys)} already-completed entries in {output_path}")
+
+    write_header = not out_file.exists()
+
+    total = len(players_df) * len(PROMPT_TEMPLATES) * samples_per_condition
     print(f"\nGenerating commentary for {len(players_df)} players...")
     print(f"  Conditions per player: 1 (explicit only)")
     print(f"  Prompts per condition: {len(PROMPT_TEMPLATES)}")
     print(f"  Samples per condition: {samples_per_condition}")
-    print(f"  Total generations: {len(players_df) * len(PROMPT_TEMPLATES) * samples_per_condition}")
-    
-    results = []
+    print(f"  Total generations: {total} ({len(completed_keys)} already done, {total - len(completed_keys)} remaining)")
 
+    results = []
     player_processing_start_time = time.time()
 
     for idx, row in tqdm(players_df.iterrows(), total=len(players_df), desc="Generating"):
         player_id = row['player_id']
         player_i_start_time = time.time()
-        
-        # Two conditions
-        # conditions = [
-        #     ('explicit', True),
-        #     ('ablated', False)
-        # ]
 
         # One condition
         conditions = [
             ('explicit', True)
         ]
-        
+
         for condition_name, include_race in conditions:
-            # Build player profile (shared across all prompts for this condition)
             profile = make_player_profile(row, include_race)
 
-            # Generate one call per prompt template
             for prompt_id in PROMPT_TEMPLATES:
                 prompt = build_prompt(profile, prompt_id)
 
-                # Generate multiple samples for this condition/prompt
                 for sample_id in range(samples_per_condition):
+                    key = (player_id, condition_name, prompt_id, sample_id)
+                    if key in completed_keys:
+                        continue  # Already done — skip on resume
+
                     try:
-                        # Generate using API
                         completion = generator(
                             prompt,
                             max_new_tokens=max_new_tokens,
                             temperature=temperature,
                             top_p=top_p
                         )
-
-                        # Store result
-                        results.append({
-                            'base_id': player_id,
-                            'player_name': row['player_name'],
-                            'position': row['player_position'],
-                            'true_race': row['race'],
-                            'condition': condition_name,
-                            'prompt_id': prompt_id,
-                            'example_year': row['example_year'],
-                            'example_team': row['example_team'],
-                            'model_name': model_name,
-                            'sample_id': sample_id,
-                            'prompt_text': prompt,
-                            'completion_text': completion
-                        })
-
                     except Exception as e:
                         print(f"\nError generating for {row['player_name']} ({prompt_id}): {e}")
-                        # Add error placeholder
-                        results.append({
-                            'base_id': player_id,
-                            'player_name': row['player_name'],
-                            'position': row['player_position'],
-                            'true_race': row['race'],
-                            'condition': condition_name,
-                            'prompt_id': prompt_id,
-                            'example_year': row['example_year'],
-                            'example_team': row['example_team'],
-                            'model_name': model_name,
-                            'sample_id': sample_id,
-                            'prompt_text': prompt,
-                            'completion_text': f"[ERROR: {str(e)[:50]}]"
-                        })
+                        completion = f"[ERROR: {str(e)[:50]}]"
+
+                    result = {
+                        'base_id': player_id,
+                        'player_name': row['player_name'],
+                        'position': row['player_position'],
+                        'true_race': row['race'],
+                        'condition': condition_name,
+                        'prompt_id': prompt_id,
+                        'example_year': row['example_year'],
+                        'example_team': row['example_team'],
+                        'model_name': model_name,
+                        'sample_id': sample_id,
+                        'prompt_text': prompt,
+                        'completion_text': completion
+                    }
+
+                    # Append immediately so progress is never lost
+                    pd.DataFrame([result]).to_csv(
+                        out_file, mode='a', header=write_header, index=False
+                    )
+                    write_header = False  # Only write header on first row
+
+                    results.append(result)
+
         player_i_end_time = time.time()
         print(f"  Processed player {idx + 1}/{len(players_df)} in {player_i_end_time - player_i_start_time:.2f} seconds")
-    
+
     completions_df = pd.DataFrame(results)
-    
-    print(f"\nGenerated {len(completions_df)} completions")
-    print(f"  By condition:\n{completions_df['condition'].value_counts()}")
-    print(f"  By prompt:\n{completions_df['prompt_id'].value_counts()}")
-    print(f"  By race:\n{completions_df['true_race'].value_counts()}")
-    print(f"  By position:\n{completions_df['position'].value_counts()}")
+
+    if len(completions_df) > 0:
+        print(f"\nGenerated {len(completions_df)} new completions")
+        print(f"  By condition:\n{completions_df['condition'].value_counts()}")
+        print(f"  By prompt:\n{completions_df['prompt_id'].value_counts()}")
+        print(f"  By race:\n{completions_df['true_race'].value_counts()}")
+        print(f"  By position:\n{completions_df['position'].value_counts()}")
+    else:
+        print("\nNo new completions generated (all already done).")
 
     player_processing_end_time = time.time()
     print(f"\nTotal generation time: {player_processing_end_time - player_processing_start_time:.2f} seconds")
-    
+
     return completions_df
 
 
@@ -722,17 +733,17 @@ def main():
     if args.players_csv:
         csv_path = args.players_csv
     else:
-        csv_path = os.getcwd() + "/players_new/sampled_players.csv"
+        csv_path = os.getcwd() + "/players_new_v2/datasets/merged_2010_2026.csv"
     players_df = pd.read_csv(csv_path)
 
     print(f"\nLoaded {len(players_df)} sampled players from {csv_path}")
 
     ###########################################################################
     # For testing, use a smaller subset (commennt out for full run)
-    mini_players_df = players_df.head(SMALL_SIZE)
-    print("\nTESTING MODE: Using smaller subset of players for quick iteration")
+    # mini_players_df = players_df.head(SMALL_SIZE)
+    # print(f"\nTESTING MODE: Using smaller subset of {SMALL_SIZE} players for quick iteration")
 
-    players_df = mini_players_df
+    # players_df = mini_players_df
     # End testing subset
     ############################################################################
 
@@ -753,27 +764,26 @@ def main():
     print("Model Name:", args.model_name)
     print("API Provider:", args.api_provider)
 
-    # Step 4: Generate completions
+    # Step 4: Generate completions (saved incrementally to output_path)
     completions_df = generate_commentary_for_players(
         players_df,
         generator,
         model_name=args.model_name,
+        output_path=args.output_path,
         samples_per_condition=args.samples_per_condition,
         max_new_tokens=args.max_new_tokens,
         temperature=args.temperature,
         top_p=args.top_p
     )
     
-    # Step 5: Save
-    save_completions(completions_df, args.output_path)
-    
     # Summary
+    total_df = pd.read_csv(args.output_path)
     print("\n" + "=" * 80)
     print("GENERATION COMPLETE")
     print("=" * 80)
-    print(f"\nTotal completions: {len(completions_df)}")
-    print(f"  Unique players: {completions_df['base_id'].nunique()}")
-    print(f"  Conditions: {completions_df['condition'].unique().tolist()}")
+    print(f"\nTotal completions in file: {len(total_df)}")
+    print(f"  Unique players: {total_df['base_id'].nunique()}")
+    print(f"  Conditions: {total_df['condition'].unique().tolist()}")
     print(f"\nOutput saved to: {args.output_path}")
     print(f"\nNext steps:")
     print(f"1. Run bias_scoring engine:")
