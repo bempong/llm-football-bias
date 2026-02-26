@@ -22,3 +22,6 @@ CLAUDE_MODELS.md
 OPENAI_MODEL.smd
 test_file.py
 show_positions.py
+players_new/
+NFL_team_rosters.json
+players_new_v2/check_duplicates.py
