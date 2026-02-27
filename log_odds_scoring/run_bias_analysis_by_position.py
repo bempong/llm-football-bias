@@ -159,9 +159,7 @@ def analyze_position(
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Analyze racial bias in LLM-generated football commentary by position"
-    )
+    parser = argparse.ArgumentParser(description="Analyze racial bias in LLM-generated football commentary by position")
     parser.add_argument(
         '--completions-path',
         type=str,
@@ -301,7 +299,11 @@ def main():
 if __name__ == "__main__":
     main()
 
-
-# python -m log_odds_scoring.run_bias_analysis_by_position --completions-path "/mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_new_generations/output/llm_generations_4o_full.csv" --output-dir output_results/bias_analysis_v3/gpt-4o-mini-full-position --z-threshold 1.0
-
-# python -m log_odds_scoring.run_bias_analysis --completions-path "/mnt/c/Users/hallj/GitHub/CS-329R-Project/llm-football-bias/llm_new_generations/output/llm_generations_4o_full.csv" --output-dir output_results/bias_analysis_v3/gpt-4o-mini-full
+# Position Command, ensure 20 words are always shown for each group.
+"""
+python -m log_odds_scoring.run_bias_analysis_by_position \
+   --completions-path "llm_new_generations/output/4o_mini_2010_2026_exp_01.csv" \
+   --output-dir output_results/bias_analysis_v4/4o-mini/by_position \
+   --top-n-words 20 \
+    --z-threshold 0.01
+"""
