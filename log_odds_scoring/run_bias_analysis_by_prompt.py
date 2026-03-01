@@ -330,8 +330,8 @@ if __name__ == "__main__":
 # Prompt Command
 """
 python -m log_odds_scoring.run_bias_analysis_by_prompt \
-   --completions-path "llm_new_generations/output/4o_mini_2010_2026_exp_01.csv" \
-   --output-dir output_results/bias_analysis_v4/4o-mini/by_prompt \
+   --completions-path "llm_new_generations/output/4o_mini_2010_2026_exp_3k.csv" \
+   --output-dir output_results/bias_analysis_v4/4o-mini_3k/by_prompt \
    --top-n-words 20 \
    --z-threshold 0.01
 """

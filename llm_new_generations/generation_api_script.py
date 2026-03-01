@@ -733,7 +733,7 @@ def main():
     if args.players_csv:
         csv_path = args.players_csv
     else:
-        csv_path = os.getcwd() + "/players_new_v2/datasets/merged_2010_2026.csv"
+        csv_path = os.getcwd() + "/players_new_v2/datasets/merged_2010_2026_3k.csv"
     players_df = pd.read_csv(csv_path)
 
     print(f"\nLoaded {len(players_df)} sampled players from {csv_path}")

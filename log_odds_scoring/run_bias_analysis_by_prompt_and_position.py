@@ -160,8 +160,8 @@ if __name__ == "__main__":
 # Example for prompt + position
 """
 python -m log_odds_scoring.run_bias_analysis_by_prompt_and_position \
-   --completions-path "llm_new_generations/output/4o_mini_2010_2026_exp_01.csv" \
-   --output-dir output_results/bias_analysis_v4/4o-mini/by_prompt_and_position \
+   --completions-path "llm_new_generations/output/4o_mini_2010_2026_exp_3k.csv" \
+   --output-dir output_results/bias_analysis_v4/4o-mini_3k/by_prompt_and_position \
    --top-n-words 20 \
    --z-threshold 0.01
 """

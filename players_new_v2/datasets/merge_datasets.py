@@ -20,16 +20,16 @@ def merge(base_path: Path, extra_path: Path, out_path: Path) -> None:
     print(f"Wrote {len(merged)} rows -> {out_path.name}")
 
 if __name__ == "__main__":
-    new_players = HERE / "2020_2026_initial.csv"
+    new_players = HERE / "2020_2026_initial_v2.csv"
 
     merge(
         HERE / "dataset_v2_1960_2019.csv",
         new_players,
-        HERE / "merged_1960_2026.csv",
+        HERE / "merged_1960_2026_v2.csv",
     )
 
     merge(
         HERE / "dataset_v2_2010_2019.csv",
         new_players,
-        HERE / "merged_2010_2026.csv",
+        HERE / "merged_2010_2026_3k.csv",
     )
