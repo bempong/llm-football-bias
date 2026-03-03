@@ -24,3 +24,8 @@ NFL_team_rosters.json
 players_new_v2/check_duplicates.py
 players/
 llm_new_generations/output/4o_mini_2010_2026_exp_initial.csv
+llm_new_generations/output/4o_mini_2010_2019_3k.csv
+llm_new_generations/output/4o_mini_2020_2026_3k.csv
+football_10.json
+kaggle_dataset/
+kaggle_player_analysis/

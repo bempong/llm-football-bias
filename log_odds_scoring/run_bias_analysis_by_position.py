@@ -314,3 +314,23 @@ python -m log_odds_scoring.run_bias_analysis_by_position \
    --top-n-words 20 \
     --z-threshold 0.01
 """
+
+
+
+# For the year split experiment for 2010s
+"""
+python -m log_odds_scoring.run_bias_analysis_by_position \
+   --completions-path "llm_new_generations/output/4o_mini_2010_2019_3k.csv" \
+   --output-dir output_results/bias_analysis_v4/4o-mini_3k/year_split/2010s/by_position \
+   --top-n-words 20 \
+    --z-threshold 0.01
+"""
+
+# For the year split experiment for 2020s
+"""
+python -m log_odds_scoring.run_bias_analysis_by_position \
+   --completions-path "llm_new_generations/output/4o_mini_2020_2026_3k.csv" \
+   --output-dir output_results/bias_analysis_v4/4o-mini_3k/year_split/2020s/by_position \
+   --top-n-words 20 \
+    --z-threshold 0.01
+"""
