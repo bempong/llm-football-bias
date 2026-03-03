@@ -16,12 +16,13 @@ import pandas as pd
 from . import config
 
 
-def tokenize(text: str) -> List[str]:
+def tokenize(text: str, extra_filter: set = None) -> List[str]:
     """
     Simple tokenization for commentary text.
     
     Args:
         text: Raw text string
+        extra_filter: Additional words to exclude (e.g. player names, team names)
     
     Returns:
         List of lowercase tokens
@@ -29,19 +30,27 @@ def tokenize(text: str) -> List[str]:
     if pd.isna(text) or not text:
         return []
     
-    # Lowercase
     text = text.lower()
-    
-    # Extract words (alphanumeric only)
     tokens = re.findall(r'\b[a-z]+\b', text)
     
-    # Filter: min length, no stopwords
+    filter_set = config.STOPWORDS
+    if extra_filter:
+        filter_set = filter_set | extra_filter
+    
     tokens = [
         t for t in tokens 
-        if len(t) >= config.MIN_TOKEN_LENGTH and t not in config.STOPWORDS
+        if len(t) >= config.MIN_TOKEN_LENGTH and t not in filter_set
     ]
     
     return tokens
+
+
+def build_name_team_filter(df: pd.DataFrame) -> set:
+    """Build a combined filter set of player name tokens and NFL team tokens."""
+    extra = set(config.NFL_TEAM_TOKENS)
+    if 'player_name' in df.columns:
+        extra |= config.build_player_name_tokens(df, 'player_name')
+    return extra
 
 
 def count_words_by_group(
@@ -49,10 +58,12 @@ def count_words_by_group(
     text_col: str,
     race_col: str,
     race_a: str,
-    race_b: str
+    race_b: str,
+    extra_filter: set = None
 ) -> Tuple[Counter, Counter, int, int]:
     """
     Count word frequencies for each racial group.
+    Filters out player names and NFL team names.
     
     Args:
         df: DataFrame with completions
@@ -60,20 +71,24 @@ def count_words_by_group(
         race_col: Column name containing race labels
         race_a: Label for group A (e.g., "white")
         race_b: Label for group B (e.g., "nonwhite")
+        extra_filter: Pre-built set of tokens to exclude (names, teams).
+                      If None, builds from df automatically.
     
     Returns:
         (counts_a, counts_b, total_a, total_b)
     """
-    # Filter to each group
+    if extra_filter is None:
+        extra_filter = build_name_team_filter(df)
+    print(f"  Filtering {len(extra_filter)} name/team tokens")
+
     df_a = df[df[race_col] == race_a]
     df_b = df[df[race_col] == race_b]
     
-    # Concatenate all text and tokenize
     text_a = ' '.join(df_a[text_col].fillna('').astype(str))
     text_b = ' '.join(df_b[text_col].fillna('').astype(str))
     
-    tokens_a = tokenize(text_a)
-    tokens_b = tokenize(text_b)
+    tokens_a = tokenize(text_a, extra_filter)
+    tokens_b = tokenize(text_b, extra_filter)
     
     counts_a = Counter(tokens_a)
     counts_b = Counter(tokens_b)
@@ -148,7 +163,8 @@ def compute_log_odds_by_race(
     race_a: str = None,
     race_b: str = None,
     min_count: int = None,
-    alpha_0: float = None
+    alpha_0: float = None,
+    extra_filter: set = None
 ) -> pd.DataFrame:
     """
     Compute log-odds ratios for all words comparing two racial groups.
@@ -161,6 +177,8 @@ def compute_log_odds_by_race(
         race_b: Label for group B (default: config.RACE_GROUP_B)
         min_count: Minimum total count to include word (default: config.LOG_ODDS_MIN_COUNT)
         alpha_0: Prior strength (default: config.LOG_ODDS_ALPHA_0)
+        extra_filter: Pre-built set of tokens to exclude (names, teams).
+                      Built from the full dataset before subsetting by position/prompt.
     
     Returns:
         DataFrame with columns:
@@ -172,7 +190,6 @@ def compute_log_odds_by_race(
         - z_score: standardized score
         - variance: estimated variance
     """
-    # Use defaults from config if not specified
     if race_a is None:
         race_a = config.RACE_GROUP_A
     if race_b is None:
@@ -186,9 +203,8 @@ def compute_log_odds_by_race(
     print(f"  Min count: {min_count}")
     print(f"  Prior strength (alpha_0): {alpha_0}")
     
-    # Count words for each group
     counts_a, counts_b, total_a, total_b = count_words_by_group(
-        df, text_col, race_col, race_a, race_b
+        df, text_col, race_col, race_a, race_b, extra_filter=extra_filter
     )
     
     print(f"\nGroup A ({race_a}): {len(counts_a)} unique words, {total_a} total tokens")

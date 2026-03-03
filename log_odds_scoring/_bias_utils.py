@@ -8,8 +8,8 @@ from pathlib import Path
 import pandas as pd
 
 from . import config
-from .log_odds_scoring import compute_log_odds_by_race
-from create_plots import generate_all_plots
+from .log_odds_scoring import compute_log_odds_by_race, build_name_team_filter
+from .create_plots import generate_all_plots
 
 
 def to_slug(label: str) -> str:
@@ -60,6 +60,7 @@ def analyze_group(
     no_plots: bool,
     top_n_words: int,
     z_threshold: float,
+    extra_filter: set = None,
 ):
     """
     Run log-odds analysis on *subset* (already filtered to a single group).
@@ -93,7 +94,7 @@ def analyze_group(
     # Log-odds
     print(f"\n  Computing log-odds ratios...")
     try:
-        log_odds_df = compute_log_odds_by_race(subset, text_col=text_col, race_col=race_col)
+        log_odds_df = compute_log_odds_by_race(subset, text_col=text_col, race_col=race_col, extra_filter=extra_filter)
         log_odds_path = output_dir / "tables" / f"log_odds_tables_{slug}.csv"
         log_odds_path.parent.mkdir(parents=True, exist_ok=True)
         log_odds_df.to_csv(log_odds_path, index=False)

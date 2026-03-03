@@ -16,12 +16,12 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent))
 
 from . import config
-from .log_odds_scoring import compute_log_odds_by_race
+from .log_odds_scoring import compute_log_odds_by_race, build_name_team_filter
 # from .adjective_categories import (
 #     compute_adjective_category_stats,
 #     create_category_pivot_table
 # )
-from create_plots import generate_all_plots
+from .create_plots import generate_all_plots
 
 
 def print_position_header(position: str):
@@ -70,7 +70,8 @@ def analyze_position(
     race_col: str,
     no_plots: bool,
     top_n_words: int,
-    z_threshold: float
+    z_threshold: float,
+    extra_filter: set = None
 ):
     """Run bias analysis for a specific position."""
 
@@ -109,7 +110,8 @@ def analyze_position(
         log_odds_df = compute_log_odds_by_race(
             position_df,
             text_col=text_col,
-            race_col=race_col
+            race_col=race_col,
+            extra_filter=extra_filter
         )
 
         log_odds_path = output_dir / "tables" / f"log_odds_tables_{position.lower()}.csv"
@@ -252,8 +254,12 @@ def main():
     print(f"\nOverall race distribution:")
     print(df[args.race_col].value_counts().to_string())
 
+    # Build name/team filter from the FULL dataset (before any position subsetting)
+    name_team_filter = build_name_team_filter(df)
+    print(f"\nBuilt global name/team filter: {len(name_team_filter)} tokens")
+
     # Analyze each position
-    for position in positions:  # Updated to include all new positions
+    for position in positions:
         analyze_position(
             df=df,
             position=position,
@@ -262,7 +268,8 @@ def main():
             race_col=args.race_col,
             no_plots=args.no_plots,
             top_n_words=args.top_n_words,
-            z_threshold=args.z_threshold
+            z_threshold=args.z_threshold,
+            extra_filter=name_team_filter
         )
 
     # Final summary

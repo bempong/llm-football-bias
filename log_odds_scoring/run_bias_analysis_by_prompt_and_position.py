@@ -25,10 +25,11 @@ from ._bias_utils import (
     save_race_distributions,
     to_slug,
 )
+from .log_odds_scoring import build_name_team_filter
 
 
 def _run_prompt_x_position(df, prompt_ids, output_dir, text_col, race_col,
-                            no_plots, top_n_words, z_threshold):
+                            no_plots, top_n_words, z_threshold, extra_filter=None):
     """Position breakdown within each prompt."""
     px_root = output_dir
     px_root.mkdir(parents=True, exist_ok=True)
@@ -66,6 +67,7 @@ def _run_prompt_x_position(df, prompt_ids, output_dir, text_col, race_col,
                 no_plots=no_plots,
                 top_n_words=top_n_words,
                 z_threshold=z_threshold,
+                extra_filter=extra_filter,
             )
 
         save_race_distributions(
@@ -108,6 +110,9 @@ def run_bias_analysis_by_prompt_and_position(
     for pid in prompt_ids:
         print(f"  {pid}: {prompt_counts[pid]}")
 
+    name_team_filter = build_name_team_filter(df)
+    print(f"\nBuilt global name/team filter: {len(name_team_filter)} tokens")
+
     _run_prompt_x_position(
         df=df,
         prompt_ids=prompt_ids,
@@ -117,6 +122,7 @@ def run_bias_analysis_by_prompt_and_position(
         no_plots=no_plots,
         top_n_words=top_n_words,
         z_threshold=z_threshold,
+        extra_filter=name_team_filter,
     )
 
     print("\n" + "=" * 80)

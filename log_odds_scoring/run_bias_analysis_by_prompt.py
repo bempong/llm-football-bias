@@ -23,8 +23,8 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent))
 
 from . import config
-from .log_odds_scoring import compute_log_odds_by_race
-from create_plots import generate_all_plots
+from .log_odds_scoring import compute_log_odds_by_race, build_name_team_filter
+from .create_plots import generate_all_plots
 
 
 # ---------------------------------------------------------------------------
@@ -72,6 +72,7 @@ def _analyze_group(
     no_plots: bool,
     top_n_words: int,
     z_threshold: float,
+    extra_filter: set = None,
 ):
     """
     Run log-odds analysis on *subset* (already filtered to a single group).
@@ -107,7 +108,7 @@ def _analyze_group(
     # --- log-odds ---
     print(f"\n  Computing log-odds ratios...")
     try:
-        log_odds_df = compute_log_odds_by_race(subset, text_col=text_col, race_col=race_col)
+        log_odds_df = compute_log_odds_by_race(subset, text_col=text_col, race_col=race_col, extra_filter=extra_filter)
         log_odds_path = output_dir / "tables" / f"log_odds_tables_{slug}.csv"
         log_odds_path.parent.mkdir(parents=True, exist_ok=True)
         log_odds_df.to_csv(log_odds_path, index=False)
@@ -154,6 +155,10 @@ def run_bias_analysis_by_prompt(
     prompt_dir = output_dir
     prompt_dir.mkdir(parents=True, exist_ok=True)
 
+    # Build name/team filter from the FULL dataset before any prompt subsetting
+    name_team_filter = build_name_team_filter(df)
+    print(f"\nBuilt global name/team filter: {len(name_team_filter)} tokens")
+
     print("\n" + "=" * 80)
     print("PROMPT-LEVEL ANALYSIS")
     print("=" * 80)
@@ -176,6 +181,7 @@ def run_bias_analysis_by_prompt(
             no_plots=no_plots,
             top_n_words=top_n_words,
             z_threshold=z_threshold,
+            extra_filter=name_team_filter,
         )
 
     _save_race_distributions(df, 'prompt_id', prompt_ids, race_col, prompt_dir)

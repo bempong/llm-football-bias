@@ -32,3 +32,33 @@ STOPWORDS = {
     'player', 'game', 'play', 'yard', 'yards', 'ball', 'field', 'team', 'down'
 }
 
+# NFL team name tokens to filter (mascots, cities, nicknames)
+NFL_TEAM_TOKENS = {
+    # Mascots / team names
+    'niners', 'bears', 'bengals', 'bills', 'broncos', 'browns', 'buccaneers',
+    'bucs', 'cardinals', 'chargers', 'chiefs', 'colts', 'commanders', 'cowboys',
+    'dolphins', 'eagles', 'falcons', 'giants', 'jaguars', 'jags', 'jets',
+    'lions', 'packers', 'panthers', 'patriots', 'pats', 'raiders', 'rams',
+    'ravens', 'redskins', 'saints', 'seahawks', 'hawks', 'steelers', 'texans',
+    'titans', 'vikings',
+    # Cities / regions
+    'arizona', 'atlanta', 'baltimore', 'buffalo', 'carolina', 'chicago',
+    'cincinnati', 'cleveland', 'dallas', 'denver', 'detroit', 'francisco',
+    'green', 'bay', 'houston', 'indianapolis', 'indy', 'jacksonville',
+    'kansas', 'las', 'vegas', 'angeles', 'los', 'miami', 'minnesota',
+    'england', 'orleans', 'york', 'oakland', 'philadelphia', 'philly',
+    'pittsburgh', 'diego', 'seattle', 'tampa', 'tennessee', 'washington',
+    'nfl',
+}
+
+
+def build_player_name_tokens(df, name_col='player_name'):
+    """Extract all individual name tokens from the player_name column."""
+    tokens = set()
+    for name in df[name_col].dropna().unique():
+        for part in str(name).lower().replace('_', ' ').split():
+            part = part.strip()
+            if len(part) >= 2:
+                tokens.add(part)
+    return tokens
+
