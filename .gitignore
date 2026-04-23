@@ -29,3 +29,15 @@ llm_new_generations/output/4o_mini_2020_2026_3k.csv
 football_10.json
 kaggle_dataset/
 kaggle_player_analysis/
+
+# race_pipeline transient / large artifacts
+players_new_v2/2020s_project/race_pipeline/data/pages/
+players_new_v2/2020s_project/race_pipeline/costs.log
+
+# race_vote_pipeline transient / redundant
+players_new_v2/2020s_project/race_vote_pipeline/vote_run*.log
+players_new_v2/2020s_project/race_vote_pipeline/data/votes.backup.csv
+players_new_v2/2020s_project/race_vote_pipeline/data/images/
+players_new_v2/2020s_project/race_vote_pipeline/data/headshots/
+
+logprob_analysis/output/logprob_completions*.csv
